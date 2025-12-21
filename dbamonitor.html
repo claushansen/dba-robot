@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DBA Bil Overvågning (Pro+)</title>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }
+        
+        header {
+            background-color: #0047b3;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .header-content { display: flex; flex-direction: column; gap: 5px; }
+        .status-bar { font-size: 0.9em; opacity: 0.9; }
+        .config-status { font-size: 0.8em; font-weight: bold; }
+        .config-ok { color: #81c784; }
+        .config-missing { color: #ffcc80; }
+
+        .controls { display: flex; gap: 10px; }
+        
+        button {
+            padding: 10px 15px; border: none; color: white;
+            font-weight: bold; cursor: pointer; border-radius: 4px; font-size: 0.9em;
+        }
+        
+        #start-btn { background-color: #ff9800; }
+        #start-btn:disabled { background-color: #4caf50; cursor: default; }
+        #settings-btn { background-color: #003380; border: 1px solid rgba(255,255,255,0.3); }
+        #settings-btn:hover { background-color: #002255; }
+
+        .car-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+
+        .car-card {
+            background: white; border-radius: 8px; overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.2s;
+            position: relative; display: flex; flex-direction: column;
+        }
+        .car-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .new-entry { border: 2px solid #4caf50; animation: flash 2s ease-out; }
+        @keyframes flash { 0% { background-color: #e8f5e9; } 100% { background-color: white; } }
+        
+        .badge-new {
+            position: absolute; top: 10px; right: 10px;
+            background-color: #4caf50; color: white; padding: 5px 10px;
+            border-radius: 4px; font-size: 0.8em; font-weight: bold; z-index: 10;
+        }
+
+        .car-image { width: 100%; height: 200px; object-fit: cover; background-color: #eee; }
+        .car-details { padding: 15px; flex-grow: 1; display: flex; flex-direction: column; }
+        .car-title { font-size: 1.1em; font-weight: bold; margin: 0 0 5px 0; color: #333; }
+        .car-time { font-size: 0.85em; color: #e65100; font-weight: 600; margin-bottom: 10px; }
+        .car-price { font-size: 1.2em; color: #0047b3; font-weight: bold; margin-bottom: 5px; }
+        .car-info { font-size: 0.9em; color: #666; margin-bottom: 10px; display: flex; gap: 10px; }
+        .car-location { font-size: 0.8em; color: #888; display: block; margin-bottom: 15px; margin-top: auto; }
+
+        .btn-link {
+            display: block; text-align: center; background-color: #0047b3; color: white;
+            text-decoration: none; padding: 8px; border-radius: 4px; font-weight: bold;
+        }
+        .btn-link:hover { background-color: #003380; }
+
+        .loading { text-align: center; color: #666; margin-top: 20px; font-style: italic; }
+        .error { color: #721c24; background-color: #f8d7da; padding: 15px; border-radius: 4px; display: none; margin-bottom: 20px; }
+        #email-log { font-size: 0.8em; color: #666; margin-top: 5px; }
+
+        /* --- MODAL STYLES --- */
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+        .modal-content {
+            background-color: #fff; margin: 5% auto; padding: 25px; border-radius: 8px;
+            width: 90%; max-width: 500px; box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            max-height: 90vh; overflow-y: auto;
+        }
+        .close-modal { float: right; font-size: 28px; font-weight: bold; cursor: pointer; color: #aaa; }
+        .close-modal:hover { color: #000; }
+        
+        .form-section { border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 15px; }
+        .form-section h3 { margin-top: 0; color: #333; font-size: 1.1em; }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9em; }
+        .form-group input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        .form-group small { display: block; color: #777; font-size: 0.8em; margin-top: 2px; }
+        
+        /* Slider styling */
+        .slider-container { display: flex; align-items: center; gap: 10px; }
+        input[type=range] { flex-grow: 1; cursor: pointer; }
+        .slider-value { font-weight: bold; color: #0047b3; min-width: 80px; text-align: right; }
+
+        .checkbox-group { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .checkbox-group input { width: 18px; height: 18px; cursor: pointer; }
+        .checkbox-group label { cursor: pointer; margin: 0; }
+
+        .save-btn { background-color: #4caf50; width: 100%; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-content">
+        <h1>DBA Bil Overvågning</h1>
+        <div class="status-bar">Status: <span id="status-text">Klar til start</span></div>
+        <div class="config-status" id="config-status">Tjekker indstillinger...</div>
+        <div id="email-log"></div>
+    </div>
+    <div class="controls">
+        <button id="settings-btn" onclick="openModal()">⚙️ Indstillinger</button>
+        <button id="start-btn" onclick="startMonitoring()">🔊 Aktiver Lyd & Start</button>
+    </div>
+</header>
+
+<!-- SETTINGS MODAL -->
+<div id="settingsModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal()">&times;</span>
+        <h2>Indstillinger</h2>
+        
+        <div class="form-section">
+            <h3>⏱️ Interval & Kilde</h3>
+            
+            <div class="form-group">
+                <label for="inp-interval">Opdateringsinterval</label>
+                <div class="slider-container">
+                    <input type="range" id="inp-interval" min="1" max="60" value="2" oninput="updateSliderVal(this.value)">
+                    <span id="interval-val" class="slider-value">2 min.</span>
+                </div>
+                <small>Hvor ofte skal systemet hente nye data?</small>
+            </div>
+
+            <div class="form-group">
+                <label for="inp-custom-url">API URL (Valgfri)</label>
+                <input type="text" id="inp-custom-url" placeholder="https://www.dba.dk/mobility/search/api/...">
+                <small>Efterlad tom for at bruge standard (Vest/Sydsjælland < 30k).</small>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>📧 Email Notifikationer</h3>
+            
+            <div class="checkbox-group">
+                <input type="checkbox" id="inp-email-enabled">
+                <label for="inp-email-enabled">Aktiver afsendelse af emails</label>
+            </div>
+
+            <div class="form-group">
+                <label for="inp-service">Service ID</label>
+                <input type="text" id="inp-service" placeholder="service_...">
+            </div>
+            <div class="form-group">
+                <label for="inp-template">Template ID</label>
+                <input type="text" id="inp-template" placeholder="template_...">
+            </div>
+            <div class="form-group">
+                <label for="inp-public">Public Key</label>
+                <input type="text" id="inp-public" placeholder="user_...">
+            </div>
+        </div>
+        
+        <button class="save-btn" onclick="saveSettings()">Gem & Anvend</button>
+    </div>
+</div>
+
+<div id="error-msg" class="error"></div>
+<div id="loading" class="loading" style="display:none;">Henter data fra DBA...</div>
+<div id="car-container" class="car-list"></div>
+
+<script>
+    // --- STANDARD KONFIGURATION ---
+    const DEFAULT_DBA_URL = "https://www.dba.dk/mobility/search/api/search/SEARCH_ID_CAR_USED?location=0.200003&location=0.200004&price_to=30000";
+    const PROXY_URL = "https://corsproxy.io/?"; 
+    const NOTIFICATION_SOUND = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+
+    // --- STATE ---
+    let seenCarIds = new Set();
+    let isFirstLoad = true;
+    let timerId = null;
+    let isRunning = false;
+    
+    // Config object
+    let config = {
+        service: '',
+        template: '',
+        public: '',
+        emailEnabled: false,
+        customUrl: '',
+        intervalMinutes: 2
+    };
+
+    // --- LOAD SETTINGS ON STARTUP ---
+    window.onload = function() {
+        loadSettings();
+    };
+
+    function loadSettings() {
+        config.service = localStorage.getItem('dba_email_service') || '';
+        config.template = localStorage.getItem('dba_email_template') || '';
+        config.public = localStorage.getItem('dba_email_public') || '';
+        config.emailEnabled = (localStorage.getItem('dba_email_enabled') === 'true'); 
+        config.customUrl = localStorage.getItem('dba_custom_url') || '';
+        
+        // Hent interval, default 2 minutter hvis ikke sat
+        const savedInterval = localStorage.getItem('dba_interval');
+        config.intervalMinutes = savedInterval ? parseInt(savedInterval) : 2;
+
+        // Udfyld felter i modal
+        document.getElementById('inp-service').value = config.service;
+        document.getElementById('inp-template').value = config.template;
+        document.getElementById('inp-public').value = config.public;
+        document.getElementById('inp-email-enabled').checked = config.emailEnabled;
+        document.getElementById('inp-custom-url').value = config.customUrl;
+        
+        // Sæt slider
+        document.getElementById('inp-interval').value = config.intervalMinutes;
+        updateSliderVal(config.intervalMinutes);
+
+        updateConfigStatus();
+
+        if (config.public) {
+            emailjs.init(config.public);
+        }
+    }
+
+    function saveSettings() {
+        // Hent værdier
+        const service = document.getElementById('inp-service').value.trim();
+        const template = document.getElementById('inp-template').value.trim();
+        const publicK = document.getElementById('inp-public').value.trim();
+        const emailEnabled = document.getElementById('inp-email-enabled').checked;
+        const customUrl = document.getElementById('inp-custom-url').value.trim();
+        const interval = parseInt(document.getElementById('inp-interval').value);
+
+        // Gem i LocalStorage
+        localStorage.setItem('dba_email_service', service);
+        localStorage.setItem('dba_email_template', template);
+        localStorage.setItem('dba_email_public', publicK);
+        localStorage.setItem('dba_email_enabled', emailEnabled);
+        localStorage.setItem('dba_custom_url', customUrl);
+        localStorage.setItem('dba_interval', interval);
+
+        // Opdater runtime config
+        config = { 
+            service, template, public: publicK, emailEnabled, customUrl, 
+            intervalMinutes: interval 
+        };
+        
+        if (publicK) emailjs.init(publicK);
+
+        updateConfigStatus();
+        closeModal();
+        
+        // Hvis systemet kører, genstart timer med nyt interval
+        if (isRunning) {
+            console.log(`Genstarter timer med ${config.intervalMinutes} min. interval`);
+            clearInterval(timerId);
+            fetchCars(); // Kør en tjek med det samme
+            timerId = setInterval(fetchCars, config.intervalMinutes * 60000);
+        }
+        
+        alert(`Indstillinger gemt! Opdaterer hvert ${config.intervalMinutes}. minut.`);
+    }
+
+    function updateSliderVal(val) {
+        document.getElementById('interval-val').innerText = val + " min.";
+    }
+
+    function updateConfigStatus() {
+        const statusEl = document.getElementById('config-status');
+        let statusText = "";
+        
+        // Vis interval
+        statusText += `⏱️ ${config.intervalMinutes} min. `;
+
+        // Tjek URL
+        if (config.customUrl) statusText += "| 🔗 Custom URL ";
+        else statusText += "| 🔗 Standard URL ";
+
+        // Tjek Email
+        if (config.emailEnabled) {
+            if (config.service && config.template && config.public) statusText += '| <span class="config-ok">✅ Email Aktiv</span>';
+            else statusText += '| <span class="config-missing">⚠️ Email mangler nøgler</span>';
+        } else {
+            statusText += '| <span style="color:#aaa;">🔕 Email Slukket</span>';
+        }
+
+        statusEl.innerHTML = statusText;
+    }
+
+    function openModal() { document.getElementById('settingsModal').style.display = 'block'; }
+    function closeModal() { document.getElementById('settingsModal').style.display = 'none'; }
+    window.onclick = function(event) { if (event.target == document.getElementById('settingsModal')) closeModal(); }
+
+    // --- MAIN LOGIC ---
+    async function startMonitoring() {
+        const btn = document.getElementById('start-btn');
+        btn.disabled = true;
+        btn.innerText = "Overvågning Kører";
+        isRunning = true;
+        
+        NOTIFICATION_SOUND.volume = 0.5;
+        NOTIFICATION_SOUND.play().then(() => {
+            NOTIFICATION_SOUND.pause();
+            NOTIFICATION_SOUND.currentTime = 0;
+        }).catch(e => console.log("Lyd-initiering:", e));
+
+        await fetchCars();
+
+        if (timerId) clearInterval(timerId);
+        // Brug det konfigurerede interval (minutter til millisekunder)
+        timerId = setInterval(fetchCars, config.intervalMinutes * 60000);
+    }
+
+    async function fetchCars() {
+        const statusText = document.getElementById('status-text');
+        const loadingDiv = document.getElementById('loading');
+        const errorDiv = document.getElementById('error-msg');
+        
+        loadingDiv.style.display = 'block';
+        errorDiv.style.display = 'none';
+
+        try {
+            let searchUrl = config.customUrl && config.customUrl.length > 0 ? config.customUrl : DEFAULT_DBA_URL;
+            const timestamp = new Date().getTime();
+            const separator = searchUrl.includes('?') ? '&' : '?';
+            const targetUrl = `${searchUrl}${separator}_t=${timestamp}`;
+            const finalUrl = PROXY_URL + encodeURIComponent(targetUrl);
+
+            const response = await fetch(finalUrl);
+            if (!response.ok) throw new Error(`Netværksfejl: ${response.status}`);
+            
+            const data = await response.json();
+            
+            if (data && data.docs) {
+                processCars(data.docs);
+                const now = new Date();
+                statusText.innerText = "Sidst tjekket: " + now.toLocaleTimeString();
+            } else {
+                throw new Error("Ingen bildata fundet");
+            }
+
+        } catch (error) {
+            console.error("Fetch Error:", error);
+            statusText.innerText = "Fejl ved opdatering!";
+            errorDiv.innerHTML = `<strong>Fejl:</strong> ${error.message}`;
+            errorDiv.style.display = 'block';
+        } finally {
+            loadingDiv.style.display = 'none';
+        }
+    }
+
+    function processCars(cars) {
+        const container = document.getElementById('car-container');
+        let newCarsFound = false;
+        
+        const carsReversed = [...cars].reverse(); 
+
+        carsReversed.forEach(car => {
+            const carId = car.id;
+
+            if (!seenCarIds.has(carId)) {
+                seenCarIds.add(carId);
+                const carCard = createCarCard(car);
+
+                if (!isFirstLoad) {
+                    newCarsFound = true;
+                    carCard.classList.add('new-entry');
+                    const badge = document.createElement('div');
+                    badge.className = 'badge-new';
+                    badge.innerText = 'NY!';
+                    carCard.appendChild(badge);
+
+                    if (config.emailEnabled) sendEmail(car);
+                }
+                container.prepend(carCard);
+            }
+        });
+
+        updateAllTimes();
+
+        if (newCarsFound) playNotificationSound();
+        isFirstLoad = false;
+    }
+
+    function updateAllTimes() {
+        const timeElements = document.querySelectorAll('.car-time');
+        timeElements.forEach(el => {
+            const rawTimestamp = el.getAttribute('data-timestamp');
+            if (rawTimestamp) {
+                const ts = parseInt(rawTimestamp);
+                el.innerText = '🕒 ' + getRelativeTime(ts);
+            }
+        });
+    }
+
+    function getRelativeTime(timestamp) {
+        if (!timestamp) return "Ukendt tid";
+        const now = new Date().getTime();
+        const diffInSeconds = Math.floor((now - timestamp) / 1000);
+
+        if (diffInSeconds < 60) return "Lige nu";
+        const diffInMinutes = Math.floor(diffInSeconds / 60);
+        if (diffInMinutes < 60) return `${diffInMinutes} min. siden`;
+        const diffInHours = Math.floor(diffInMinutes / 60);
+        if (diffInHours < 24) return `${diffInHours} timer siden`;
+        const diffInDays = Math.floor(diffInHours / 24);
+        if (diffInDays === 1) return "1 dag siden";
+        return `${diffInDays} dage siden`;
+    }
+
+    function sendEmail(car) {
+        const logDiv = document.getElementById('email-log');
+        if (!config.service || !config.template || !config.public) {
+            logDiv.innerHTML = `<span style="color:orange">⚠️ Ny bil fundet, men email nøgler mangler.</span>`;
+            return;
+        }
+
+        const templateParams = {
+            heading: car.heading,
+            price: car.price ? `${car.price.amount} kr.` : '?',
+            year: car.year || '?',
+            mileage: car.mileage || '?',
+            link: car.canonical_url
+        };
+
+        emailjs.send(config.service, config.template, templateParams)
+            .then(function(response) {
+                console.log('Email sendt!', response.status);
+                logDiv.innerHTML = `<span style="color:green">✅ Email sendt: ${car.heading}</span>`;
+            }, function(error) {
+                console.log('Fejl ved email:', error);
+                logDiv.innerHTML = `<span style="color:red">❌ Email fejl: ${error.text}</span>`;
+            });
+    }
+
+    function createCarCard(car) {
+        const div = document.createElement('div');
+        div.className = 'car-card';
+
+        let imageUrl = 'https://via.placeholder.com/300x200?text=Ingen+Billede';
+        if (car.image && car.image.url) imageUrl = car.image.url;
+        else if (car.images && car.images.length > 0) imageUrl = car.images[0].url;
+
+        const price = car.price ? `${car.price.amount.toLocaleString('da-DK')} kr.` : 'Pris ikke oplyst';
+        const year = car.year || 'N/A';
+        const mileage = car.mileage ? car.mileage.toLocaleString('da-DK') : '0';
+        const location = car.location || (car.contact_info ? car.contact_info.city : 'Ukendt sted');
+        const timeAgo = getRelativeTime(car.timestamp);
+
+        div.innerHTML = `
+            <img src="${imageUrl}" alt="${car.heading}" class="car-image">
+            <div class="car-details">
+                <h3 class="car-title">${car.heading}</h3>
+                <div class="car-time" data-timestamp="${car.timestamp}">🕒 ${timeAgo}</div>
+                <div class="car-price">${price}</div>
+                <div class="car-info">
+                    <span>📅 ${year}</span>
+                    <span>🚗 ${mileage} km</span>
+                </div>
+                <span class="car-location">📍 ${location}</span>
+                <a href="${car.canonical_url}" target="_blank" class="btn-link">Se Annonce</a>
+            </div>
+        `;
+        return div;
+    }
+
+    function playNotificationSound() {
+        NOTIFICATION_SOUND.currentTime = 0;
+        NOTIFICATION_SOUND.play().catch(e => console.error("Lydfejl:", e));
+    }
+</script>
+
+</body>
+</html>
