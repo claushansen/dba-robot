@@ -29,11 +29,11 @@
             align-items: center;
             margin-bottom: 20px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            position: relative; /* Vigtig for absolut positionering af ikoner */
+            position: relative;
         }
 
         .header-content { display: flex; flex-direction: column; gap: 5px; }
-        h1 { margin: 0; font-size: 1.5em; padding-right: 80px; /* Plads til ikoner */ }
+        h1 { margin: 0; font-size: 1.5em; padding-right: 80px; }
         .status-bar { font-size: 0.9em; opacity: 0.9; }
         
         .config-status { font-size: 0.8em; font-weight: bold; margin-top: 3px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -79,8 +79,8 @@
         @media (max-width: 600px) {
             body { padding: 10px; }
             header { flex-direction: column; align-items: stretch; gap: 15px; padding: 20px 15px; text-align: center; }
-            h1 { padding-right: 0; font-size: 1.3em; margin-top: 20px; } /* Flyt tekst ned så ikoner er øverst */
-            .top-icons { top: 10px; right: 10px; } /* Behold ikoner i hjørnet */
+            h1 { padding-right: 0; font-size: 1.3em; margin-top: 20px; }
+            .top-icons { top: 10px; right: 10px; }
             .config-status { justify-content: center; }
             button.action-btn { width: 100%; justify-content: center; padding: 12px; }
         }
@@ -215,12 +215,11 @@
                     <input type="range" id="inp-interval" min="1" max="60" value="2" oninput="updateSliderVal(this.value)">
                     <span id="interval-val" class="slider-value">2 min.</span>
                 </div>
-                <small>Hvor ofte skal systemet hente nye data?</small>
             </div>
             <div class="form-group">
-                <label for="inp-custom-url">API URL (Valgfri)</label>
-                <input type="text" id="inp-custom-url" placeholder="https://www.dba.dk/mobility/search/api/...">
-                <small>Efterlad tom for at bruge standard (Vest/Sydsjælland < 30k).</small>
+                <label for="inp-custom-url">DBA Søge-URL</label>
+                <input type="text" id="inp-custom-url" placeholder="https://www.dba.dk/mobility/search/car?price_to=50000...">
+                <small>Kopier URL'en fra din browser på DBA.dk og sæt ind her. Efterlad tom for standard søgning.</small>
             </div>
         </div>
 
@@ -258,13 +257,25 @@
         
         <div class="form-section">
             <h3>Sådan virker siden</h3>
-            <p>Siden henter automatisk bildata fra DBA.dk baseret på indstillingerne. Når en <strong>ny bil</strong> (som ikke er set før i denne session) dukker op:</p>
+            <p>Siden henter automatisk bildata fra DBA.dk. Når en <strong>ny bil</strong> (som ikke er set før i denne session) dukker op:</p>
             <ul>
                 <li>Siden afspiller en lyd ("Ding!").</li>
                 <li>Bilen markeres med et grønt <strong>NY!</strong> skilt.</li>
                 <li>Hvis konfigureret, sendes en email til dig.</li>
             </ul>
             <p><small><strong>NB:</strong> Siden skal være åben i browseren for at virke.</small></p>
+        </div>
+
+        <div class="form-section">
+            <h3>Sådan laver du specifikke søgninger</h3>
+            <div class="help-step">
+                <h4>Vil du overvåge noget bestemt?</h4>
+                1. Gå ind på <a href="https://www.dba.dk/biler/" target="_blank" class="help-link">DBA.dk/biler</a> i en ny fane.<br>
+                2. Lav din søgning præcis som du vil have den (f.eks. "VW Golf, Max 50.000 kr, Fyn").<br>
+                3. <strong>Kopier hele adressen (URL'en)</strong> oppe fra din browsers adressefelt.<br>
+                4. Klik på <i class="fa-solid fa-gear"></i> <strong>Indstillinger</strong> her på siden.<br>
+                5. Sæt linket ind i feltet <strong>"DBA Søge-URL"</strong> og klik på Gem.
+            </div>
         </div>
 
         <div class="form-section">
@@ -278,14 +289,15 @@
             <div class="help-step">
                 <h4>Trin 2: Forbind Gmail (Service ID)</h4>
                 Gå til "Email Services" → "Add New Service" → Vælg "Gmail".<br>
-                Forbind din konto. Kopier <strong>Service ID</strong> (f.eks. <code>service_xyz</code>) ind i indstillingerne her på siden.
+                Log ind med din Google konto.<br>
+                Kopier <strong>Service ID</strong> (f.eks. <code>service_xyz</code>) ind i indstillingerne her.
             </div>
 
             <div class="help-step">
                 <h4>Trin 3: Opret Skabelon (Template ID)</h4>
                 Gå til "Email Templates" → "Create New Template".<br>
-                I emnefeltet skriv: <code>Ny bil: {{heading}}</code><br>
-                I indholdet skriv:
+                I emnefeltet ("Subject") skriv: <code>Ny bil: {{heading}}</code><br>
+                I indholdet ("Content") skriv:
                 <span class="code-block">
 Ny bil fundet!
 Model: {{heading}}
@@ -294,7 +306,7 @@ Pris: {{price}}
 Km: {{mileage}}
 Link: {{link}}
                 </span>
-                Gem og kopier <strong>Template ID</strong> (f.eks. <code>template_abc</code>) ind i indstillingerne.
+                Klik "Save" og kopier <strong>Template ID</strong> (f.eks. <code>template_abc</code>) ind i indstillingerne.
             </div>
 
             <div class="help-step">
@@ -314,7 +326,11 @@ Link: {{link}}
 
 <script>
     // --- STANDARD KONFIGURATION ---
-    const DEFAULT_DBA_URL = "https://www.dba.dk/mobility/search/api/search/SEARCH_ID_CAR_USED?location=0.200003&location=0.200004&price_to=30000";
+    // Dette er den "rå" API URL base. Vi bruger denne hvis brugeren paster en browser URL.
+    const API_BASE_URL = "https://www.dba.dk/mobility/search/api/search/SEARCH_ID_CAR_USED";
+    // Default fallback søgning (Vest/Sydsjælland < 30k)
+    const DEFAULT_SEARCH_PARAMS = "?location=0.200003&location=0.200004&price_to=30000";
+    
     const PROXY_URL = "https://corsproxy.io/?"; 
     const NOTIFICATION_SOUND = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
@@ -414,14 +430,10 @@ Link: {{link}}
         statusEl.innerHTML = statusText;
     }
 
-    // --- MODAL FUNCTIONS (GENERIC) ---
     function openModal(modalId) { document.getElementById(modalId).style.display = 'block'; }
     function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
-    
     window.onclick = function(event) { 
-        if (event.target.classList.contains('modal')) {
-            event.target.style.display = "none";
-        }
+        if (event.target.classList.contains('modal')) event.target.style.display = 'none'; 
     }
 
     // --- MAIN LOGIC ---
@@ -452,13 +464,41 @@ Link: {{link}}
         errorDiv.style.display = 'none';
 
         try {
-            let searchUrl = config.customUrl && config.customUrl.length > 0 ? config.customUrl : DEFAULT_DBA_URL;
-            const timestamp = new Date().getTime();
-            const separator = searchUrl.includes('?') ? '&' : '?';
-            const targetUrl = `${searchUrl}${separator}_t=${timestamp}`;
-            const finalUrl = PROXY_URL + encodeURIComponent(targetUrl);
+            // URL LOGIK: 
+            // 1. Tag base URL.
+            // 2. Hvis custom URL findes, ekstraher parametre fra den (alt efter '?').
+            // 3. Ellers brug standard parametre.
+            
+            let targetUrl = API_BASE_URL;
+            let queryParams = DEFAULT_SEARCH_PARAMS;
 
-            const response = await fetch(finalUrl);
+            if (config.customUrl && config.customUrl.trim() !== "") {
+                if (config.customUrl.includes("?")) {
+                    // Hvis bruger har indsat en hel URL, snup parametrene
+                    const parts = config.customUrl.split('?');
+                    if (parts.length > 1) {
+                        queryParams = "?" + parts[1];
+                    }
+                } else if (!config.customUrl.startsWith("http")) {
+                    // Hvis bruger bare har indsat parametre (f.eks. price_to=10000)
+                    queryParams = "?" + config.customUrl;
+                }
+                // Hvis bruger paster en ren URL uden '?', bruger vi den som den er (men det er sjældent brugbart for søgning)
+            }
+
+            // Byg den endelige URL med timestamp for at undgå cache
+            const timestamp = new Date().getTime();
+            // queryParams har allerede '?' som første tegn, så vi bruger '&' til timestamp
+            // Men hvis queryParams er tomt, skal vi bruge '?'
+            const separator = queryParams.includes('?') ? '&' : '?';
+            const finalDbaUrl = `${targetUrl}${queryParams}${separator}_t=${timestamp}`;
+            
+            // Kør gennem proxy
+            const finalFetchUrl = PROXY_URL + encodeURIComponent(finalDbaUrl);
+
+            console.log("Fetcher:", finalDbaUrl);
+
+            const response = await fetch(finalFetchUrl);
             if (!response.ok) throw new Error(`Netværksfejl: ${response.status}`);
             
             const data = await response.json();
