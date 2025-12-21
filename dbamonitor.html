@@ -22,49 +22,67 @@
         header {
             background-color: #0047b3;
             color: white;
-            padding: 15px;
+            padding: 20px;
             border-radius: 8px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            position: relative; /* Vigtig for absolut positionering af ikoner */
         }
 
         .header-content { display: flex; flex-direction: column; gap: 5px; }
-        h1 { margin: 0; font-size: 1.5em; }
+        h1 { margin: 0; font-size: 1.5em; padding-right: 80px; /* Plads til ikoner */ }
         .status-bar { font-size: 0.9em; opacity: 0.9; }
         
         .config-status { font-size: 0.8em; font-weight: bold; margin-top: 3px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .config-item { display: inline-flex; align-items: center; gap: 4px; }
         .config-ok { color: #81c784; }
         .config-missing { color: #ffcc80; }
-        .config-item { display: inline-flex; align-items: center; gap: 4px; }
 
-        .controls { display: flex; gap: 10px; }
+        /* --- KNAPPER OG IKONER --- */
+        .top-icons {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.8);
+            font-size: 1.4em;
+            cursor: pointer;
+            transition: all 0.2s;
+            padding: 5px;
+        }
+        .icon-btn:hover { color: #fff; transform: scale(1.1); }
+
+        .main-controls { margin-top: 10px; }
         
-        button {
-            padding: 10px 15px; border: none; color: white;
+        button.action-btn {
+            padding: 10px 20px; border: none; color: white;
             font-weight: bold; cursor: pointer; border-radius: 4px; font-size: 0.9em;
             transition: background-color 0.2s;
             white-space: nowrap;
-            display: flex; align-items: center; gap: 8px; /* Ikon og tekst på linje */
+            display: inline-flex; align-items: center; gap: 8px;
         }
         
         #start-btn { background-color: #ff9800; }
         #start-btn:hover { background-color: #e68900; }
         #start-btn:disabled { background-color: #4caf50; cursor: default; }
-        
-        #settings-btn { background-color: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); }
-        #settings-btn:hover { background-color: rgba(255,255,255,0.3); }
 
         /* --- RESPONSIVT DESIGN --- */
         @media (max-width: 600px) {
             body { padding: 10px; }
-            header { flex-direction: column; align-items: stretch; text-align: center; gap: 15px; padding: 20px 15px; }
-            .header-content { margin-bottom: 5px; }
+            header { flex-direction: column; align-items: stretch; gap: 15px; padding: 20px 15px; text-align: center; }
+            h1 { padding-right: 0; font-size: 1.3em; margin-top: 20px; } /* Flyt tekst ned så ikoner er øverst */
+            .top-icons { top: 10px; right: 10px; } /* Behold ikoner i hjørnet */
             .config-status { justify-content: center; }
-            .controls { flex-direction: column; width: 100%; gap: 10px; }
-            button { width: 100%; padding: 12px; font-size: 1em; justify-content: center; }
+            button.action-btn { width: 100%; justify-content: center; padding: 12px; }
         }
 
         /* --- BIL KORT --- */
@@ -123,10 +141,10 @@
         .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
         .modal-content {
             background-color: #fff; margin: 5% auto; padding: 25px; border-radius: 8px;
-            width: 90%; max-width: 500px; box-shadow: 0 5px 20px rgba(0,0,0,0.3);
-            max-height: 90vh; overflow-y: auto;
+            width: 90%; max-width: 550px; box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            max-height: 90vh; overflow-y: auto; position: relative;
         }
-        .close-modal { float: right; font-size: 24px; color: #aaa; cursor: pointer; transition: color 0.2s; }
+        .close-modal { position: absolute; top: 15px; right: 20px; font-size: 24px; color: #aaa; cursor: pointer; transition: color 0.2s; }
         .close-modal:hover { color: #333; }
         
         .form-section { border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 15px; }
@@ -146,11 +164,27 @@
         .checkbox-group label { cursor: pointer; margin: 0; }
 
         .save-btn { background-color: #4caf50; width: 100%; margin-top: 10px; display: flex; justify-content: center; gap: 8px; }
+
+        /* --- HELP CONTENT STYLES --- */
+        .help-step { margin-bottom: 15px; border-left: 3px solid #0047b3; padding-left: 10px; }
+        .help-step h4 { margin: 0 0 5px 0; color: #0047b3; }
+        .code-block { background: #f1f1f1; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.9em; color: #333; display: block; margin-top: 5px; white-space: pre-wrap; word-break: break-all; }
+        .help-link { color: #0047b3; text-decoration: underline; }
     </style>
 </head>
 <body>
 
 <header>
+    <!-- Top Højre Ikoner -->
+    <div class="top-icons">
+        <button class="icon-btn" onclick="openModal('settingsModal')" title="Indstillinger">
+            <i class="fa-solid fa-gear"></i>
+        </button>
+        <button class="icon-btn" onclick="openModal('helpModal')" title="Hjælp & Vejledning">
+            <i class="fa-solid fa-circle-question"></i>
+        </button>
+    </div>
+
     <div class="header-content">
         <h1>DBA Bil Overvågning</h1>
         <div class="status-bar">Status: <span id="status-text">Klar til start</span></div>
@@ -158,26 +192,23 @@
             <i class="fa-solid fa-spinner fa-spin"></i> Tjekker indstillinger...
         </div>
         <div id="email-log"></div>
-    </div>
-    <div class="controls">
-        <button id="settings-btn" onclick="openModal()">
-            <i class="fa-solid fa-gear"></i> Indstillinger
-        </button>
-        <button id="start-btn" onclick="startMonitoring()">
-            <i class="fa-solid fa-volume-high"></i> Aktiver Lyd & Start
-        </button>
+        
+        <div class="main-controls">
+            <button id="start-btn" class="action-btn" onclick="startMonitoring()">
+                <i class="fa-solid fa-volume-high"></i> Aktiver Lyd & Start
+            </button>
+        </div>
     </div>
 </header>
 
 <!-- SETTINGS MODAL -->
 <div id="settingsModal" class="modal">
     <div class="modal-content">
-        <span class="close-modal" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></span>
-        <h2>Indstillinger</h2>
+        <span class="close-modal" onclick="closeModal('settingsModal')"><i class="fa-solid fa-xmark"></i></span>
+        <h2><i class="fa-solid fa-gear"></i> Indstillinger</h2>
         
         <div class="form-section">
             <h3><i class="fa-solid fa-sliders"></i> Interval & Kilde</h3>
-            
             <div class="form-group">
                 <label for="inp-interval">Opdateringsinterval</label>
                 <div class="slider-container">
@@ -186,7 +217,6 @@
                 </div>
                 <small>Hvor ofte skal systemet hente nye data?</small>
             </div>
-
             <div class="form-group">
                 <label for="inp-custom-url">API URL (Valgfri)</label>
                 <input type="text" id="inp-custom-url" placeholder="https://www.dba.dk/mobility/search/api/...">
@@ -196,12 +226,10 @@
 
         <div class="form-section">
             <h3><i class="fa-solid fa-envelope"></i> Email Notifikationer</h3>
-            
             <div class="checkbox-group">
                 <input type="checkbox" id="inp-email-enabled">
                 <label for="inp-email-enabled">Aktiver afsendelse af emails</label>
             </div>
-
             <div class="form-group">
                 <label for="inp-service">Service ID</label>
                 <input type="text" id="inp-service" placeholder="service_...">
@@ -216,9 +244,65 @@
             </div>
         </div>
         
-        <button class="save-btn" onclick="saveSettings()">
+        <button class="save-btn action-btn" onclick="saveSettings()">
             <i class="fa-solid fa-floppy-disk"></i> Gem & Anvend
         </button>
+    </div>
+</div>
+
+<!-- HELP MODAL -->
+<div id="helpModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal('helpModal')"><i class="fa-solid fa-xmark"></i></span>
+        <h2><i class="fa-solid fa-circle-question"></i> Hjælp & Vejledning</h2>
+        
+        <div class="form-section">
+            <h3>Sådan virker siden</h3>
+            <p>Siden henter automatisk bildata fra DBA.dk baseret på indstillingerne. Når en <strong>ny bil</strong> (som ikke er set før i denne session) dukker op:</p>
+            <ul>
+                <li>Siden afspiller en lyd ("Ding!").</li>
+                <li>Bilen markeres med et grønt <strong>NY!</strong> skilt.</li>
+                <li>Hvis konfigureret, sendes en email til dig.</li>
+            </ul>
+            <p><small><strong>NB:</strong> Siden skal være åben i browseren for at virke.</small></p>
+        </div>
+
+        <div class="form-section">
+            <h3>Sådan opsætter du EmailJS (Gratis)</h3>
+            
+            <div class="help-step">
+                <h4>Trin 1: Opret konto</h4>
+                Gå til <a href="https://www.emailjs.com/" target="_blank" class="help-link">emailjs.com</a> og opret en gratis konto ("Sign Up Free").
+            </div>
+
+            <div class="help-step">
+                <h4>Trin 2: Forbind Gmail (Service ID)</h4>
+                Gå til "Email Services" → "Add New Service" → Vælg "Gmail".<br>
+                Forbind din konto. Kopier <strong>Service ID</strong> (f.eks. <code>service_xyz</code>) ind i indstillingerne her på siden.
+            </div>
+
+            <div class="help-step">
+                <h4>Trin 3: Opret Skabelon (Template ID)</h4>
+                Gå til "Email Templates" → "Create New Template".<br>
+                I emnefeltet skriv: <code>Ny bil: {{heading}}</code><br>
+                I indholdet skriv:
+                <span class="code-block">
+Ny bil fundet!
+Model: {{heading}}
+Pris: {{price}}
+Årgang: {{year}}
+Km: {{mileage}}
+Link: {{link}}
+                </span>
+                Gem og kopier <strong>Template ID</strong> (f.eks. <code>template_abc</code>) ind i indstillingerne.
+            </div>
+
+            <div class="help-step">
+                <h4>Trin 4: Find Public Key</h4>
+                Gå til "Account" (klik på dit navn nederst til venstre eller i menuen) → "API Keys".<br>
+                Kopier <strong>Public Key</strong> (f.eks. <code>user_1234...</code>) ind i indstillingerne.
+            </div>
+        </div>
     </div>
 </div>
 
@@ -271,7 +355,7 @@
 
         if (config.public) {
             try { emailjs.init(config.public); } 
-            catch(e) { console.warn("EmailJS init fejl (sandsynligvis adblocker):", e); }
+            catch(e) { console.warn("EmailJS init fejl:", e); }
         }
     }
 
@@ -297,7 +381,7 @@
         }
 
         updateConfigStatus();
-        closeModal();
+        closeModal('settingsModal');
         
         if (isRunning) {
             clearInterval(timerId);
@@ -330,9 +414,15 @@
         statusEl.innerHTML = statusText;
     }
 
-    function openModal() { document.getElementById('settingsModal').style.display = 'block'; }
-    function closeModal() { document.getElementById('settingsModal').style.display = 'none'; }
-    window.onclick = function(event) { if (event.target == document.getElementById('settingsModal')) closeModal(); }
+    // --- MODAL FUNCTIONS (GENERIC) ---
+    function openModal(modalId) { document.getElementById(modalId).style.display = 'block'; }
+    function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
+    
+    window.onclick = function(event) { 
+        if (event.target.classList.contains('modal')) {
+            event.target.style.display = "none";
+        }
+    }
 
     // --- MAIN LOGIC ---
     async function startMonitoring() {
