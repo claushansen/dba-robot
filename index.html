@@ -10,7 +10,7 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Dynamisk Favicon placeholder -->
+    <!-- Dynamisk Favicon -->
     <link id="favicon" rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🕵️</text></svg>">
 
     <style>
@@ -21,7 +21,7 @@
 
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); margin: 0; padding: 20px; transition: background-color 0.3s; }
         
-        /* HEADER & NAV */
+        /* HEADER */
         header {
             background-color: var(--primary-color);
             color: white;
@@ -32,20 +32,14 @@
             gap: 15px;
             margin-bottom: 20px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: background-color 0.3s;
             position: relative;
+            transition: background-color 0.3s;
         }
 
         .top-row { display: flex; justify-content: space-between; align-items: center; }
         
-        /* Mode Switcher Tabs */
         .mode-switch {
-            display: flex;
-            background: rgba(0,0,0,0.2);
-            border-radius: 8px;
-            padding: 4px;
-            gap: 5px;
-            align-self: flex-start;
+            display: flex; background: rgba(0,0,0,0.2); border-radius: 8px; padding: 4px; gap: 5px; align-self: flex-start;
         }
         .mode-btn {
             background: transparent; border: none; color: rgba(255,255,255,0.7);
@@ -57,28 +51,25 @@
 
         .header-content h1 { margin: 0; font-size: 1.4em; }
         .status-bar { font-size: 0.9em; opacity: 0.9; margin-top: 5px; }
-        
         .config-status { font-size: 0.8em; font-weight: bold; margin-top: 5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
         .config-item { display: inline-flex; align-items: center; gap: 4px; }
 
-        /* Top Right Icons */
         .top-icons { display: flex; gap: 10px; }
         .icon-btn {
             background: rgba(255,255,255,0.15); border: none; color: white;
-            font-size: 1.1em; cursor: pointer; padding: 8px 12px; border-radius: 4px;
-            transition: all 0.2s;
+            font-size: 1.1em; cursor: pointer; padding: 8px 12px; border-radius: 4px; transition: all 0.2s;
         }
         .icon-btn:hover { background: rgba(255,255,255,0.3); }
 
-        /* Start Button */
-        #start-btn {
+        #toggle-btn {
             background-color: #ff9800; color: white; border: none;
             padding: 12px 20px; border-radius: 4px; font-weight: bold; cursor: pointer;
             width: 100%; font-size: 1em; display: flex; justify-content: center; align-items: center; gap: 8px;
             transition: background 0.2s;
         }
-        #start-btn:hover { background-color: #e68900; }
-        #start-btn:disabled { background-color: #4caf50; cursor: default; }
+        #toggle-btn:hover { background-color: #e68900; }
+        #toggle-btn.running { background-color: #d32f2f; } /* Rød stop farve */
+        #toggle-btn.running:hover { background-color: #b71c1c; }
 
         /* LIST & CARDS */
         .item-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
@@ -102,13 +93,9 @@
         .item-image { width: 100%; height: 200px; object-fit: cover; background-color: #eee; }
         .item-details { padding: 15px; flex-grow: 1; display: flex; flex-direction: column; }
         .item-title { font-size: 1.1em; font-weight: bold; margin: 0 0 5px 0; color: #333; line-height: 1.3; }
-        
         .item-time { font-size: 0.85em; color: #e65100; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
         .item-price { font-size: 1.2em; color: var(--primary-color); font-weight: bold; margin-bottom: 8px; }
-        
         .item-info { font-size: 0.9em; color: #666; margin-bottom: 12px; display: flex; gap: 15px; align-items: center; }
-        .item-info span { display: flex; align-items: center; gap: 5px; }
-
         .item-location { font-size: 0.85em; color: #888; display: flex; align-items: center; gap: 6px; margin-bottom: 15px; margin-top: auto; }
 
         .btn-link {
@@ -130,7 +117,6 @@
             max-height: 90vh; overflow-y: auto; position: relative;
         }
         .close-modal { position: absolute; top: 15px; right: 20px; font-size: 24px; color: #aaa; cursor: pointer; }
-        .close-modal:hover { color: #333; }
         
         .form-section { border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 15px; }
         .form-section h3 { margin-top: 0; color: #333; font-size: 1.1em; display: flex; align-items: center; gap: 8px; }
@@ -138,14 +124,8 @@
         .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9em; }
         .form-group input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
         .form-group small { display: block; color: #777; font-size: 0.8em; margin-top: 2px; }
-        
         .save-btn { background-color: #4caf50; width: 100%; border: none; color: white; padding: 10px; font-weight: bold; cursor: pointer; border-radius: 4px; margin-top: 10px; }
         
-        .test-btn {
-            background-color: #2196F3; width: 100%; border: none; color: white; padding: 8px; font-weight: bold; cursor: pointer; border-radius: 4px; margin-top: 10px;
-        }
-        .test-btn:hover { background-color: #1976D2; }
-
         /* Checkbox & Slider */
         .checkbox-group { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
         .checkbox-group input { width: 18px; height: 18px; cursor: pointer; }
@@ -153,12 +133,35 @@
         input[type=range] { flex-grow: 1; cursor: pointer; }
         .slider-value { font-weight: bold; color: #333; min-width: 60px; text-align: right; }
 
+        /* TOAST */
+        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+        .toast {
+            background-color: white; width: 320px; padding: 15px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            border-left: 5px solid #4caf50; display: flex; gap: 12px; align-items: center; cursor: pointer;
+            opacity: 0; transform: translateY(20px); animation: slideIn 0.3s forwards, fadeOut 0.5s 5.5s forwards; transition: transform 0.2s;
+        }
+        .toast:hover { transform: scale(1.02); }
+        .toast-img { width: 60px; height: 60px; border-radius: 4px; object-fit: cover; flex-shrink: 0; }
+        .toast-content { overflow: hidden; }
+        .toast-title { font-weight: bold; font-size: 0.95em; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .toast-price { color: var(--primary-color); font-weight: bold; font-size: 0.9em; margin-top: 2px; }
+        @keyframes slideIn { to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeOut { to { opacity: 0; transform: translateX(100%); } }
+
+        /* HELP CONTENT STYLES */
+        .help-step { margin-bottom: 15px; border-left: 3px solid #0047b3; padding-left: 10px; }
+        .help-step h4 { margin: 0 0 5px 0; color: #0047b3; }
+        .code-block { background: #f1f1f1; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.9em; color: #333; display: block; margin-top: 5px; white-space: pre-wrap; word-break: break-all; }
+        .help-link { color: #0047b3; text-decoration: underline; }
+
         @media (max-width: 600px) {
             header { padding: 15px; }
             .top-row { flex-direction: column; align-items: stretch; gap: 15px; }
             .top-icons { align-self: flex-end; }
             .mode-switch { justify-content: center; width: 100%; }
             .mode-btn { flex-grow: 1; justify-content: center; }
+            #toast-container { bottom: 10px; right: 10px; left: 10px; width: auto; }
+            .toast { width: auto; }
         }
     </style>
 </head>
@@ -197,10 +200,13 @@
         <div id="email-log"></div>
     </div>
 
-    <button id="start-btn" onclick="startMonitoring()">
+    <button id="toggle-btn" onclick="toggleMonitoring()">
         <i class="fa-solid fa-play"></i> Aktiver Lyd, Notifikationer & Start
     </button>
 </header>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>
 
 <!-- SETTINGS MODAL -->
 <div id="settingsModal" class="modal">
@@ -226,6 +232,14 @@
         </div>
 
         <div class="form-section">
+            <h3><i class="fa-solid fa-bell"></i> Lyd & Notifikationer</h3>
+            <div class="checkbox-group">
+                <input type="checkbox" id="inp-sound-enabled">
+                <label for="inp-sound-enabled">Afspil lyd ved nye fund</label>
+            </div>
+        </div>
+
+        <div class="form-section">
             <h3><i class="fa-solid fa-envelope"></i> Email (Deles på tværs)</h3>
             <div class="checkbox-group">
                 <input type="checkbox" id="inp-email-enabled">
@@ -243,14 +257,6 @@
                 <label>Public Key</label>
                 <input type="text" id="inp-public" placeholder="user_...">
             </div>
-        </div>
-
-        <div class="form-section">
-            <h3><i class="fa-solid fa-bell"></i> Browser Notifikationer</h3>
-            <p style="font-size:0.9em; color:#666;">Virker ikke hvis filen åbnes via "file://". Brug localhost eller GitHub Pages.</p>
-            <button class="test-btn" onclick="testNotification()">
-                <i class="fa-solid fa-vibration"></i> Send Test Notifikation
-            </button>
         </div>
         
         <button class="save-btn" onclick="saveSettings()">Gem Indstillinger</button>
@@ -271,26 +277,45 @@
                 <li><strong>Både:</strong> Viser Årgang og Fod.</li>
                 <li><strong>Ting:</strong> Generel visning for møbler, elektronik osv.</li>
             </ul>
-            <p>Du skifter mellem dem i toppen. Hver kategori husker sin egen søge-URL.</p>
-        </div>
-
-        <div class="form-section">
-            <h3>Notifikationer</h3>
-            <p>Siden sender en <strong>Browser Notifikation</strong> (popup i hjørnet af skærmen) når den finder noget nyt, så du ikke behøver stirre på siden.</p>
+            <p>Listen viser <strong>maksimalt 50 annoncer</strong> for at holde siden hurtig.</p>
         </div>
 
         <div class="form-section">
             <h3>Email Opsætning (EmailJS)</h3>
-            <ol style="padding-left:20px; line-height:1.6;">
-                <li>Opret gratis konto på <strong>emailjs.com</strong>.</li>
-                <li>Tilføj <strong>"Gmail Service"</strong> under "Email Services". Kopier <code>Service ID</code>.</li>
-                <li>Opret en <strong>Template</strong> under "Email Templates".<br>
-                    Indhold: <code>Model: {{heading}}, Pris: {{price}}, Link: {{link}}</code>.<br>
-                    Kopier <code>Template ID</code>.
-                </li>
-                <li>Find <strong>Public Key</strong> under din Account-menu.</li>
-                <li>Indsæt alle 3 dele i indstillingerne her på siden.</li>
-            </ol>
+            
+            <div class="help-step">
+                <h4>Trin 1: Opret konto</h4>
+                Gå til <a href="https://www.emailjs.com/" target="_blank" class="help-link">emailjs.com</a> og opret en gratis konto ("Sign Up Free").
+            </div>
+
+            <div class="help-step">
+                <h4>Trin 2: Forbind Gmail (Service ID)</h4>
+                Gå til "Email Services" → "Add New Service" → Vælg "Gmail".<br>
+                Log ind med din Google konto.<br>
+                Kopier <strong>Service ID</strong> (f.eks. <code>service_xyz</code>) ind i indstillingerne her.
+            </div>
+
+            <div class="help-step">
+                <h4>Trin 3: Opret Skabelon (Template ID)</h4>
+                Gå til "Email Templates" → "Create New Template".<br>
+                I emnefeltet ("Subject") skriv: <code>Ny vare: {{heading}}</code><br>
+                I indholdet ("Content") skriv:
+                <span class="code-block">
+Ny vare fundet!
+Søgning: {{search_query}}
+Model: {{heading}}
+Pris: {{price}}
+Årgang: {{year}}
+Link: {{link}}
+                </span>
+                Klik "Save" og kopier <strong>Template ID</strong> (f.eks. <code>template_abc</code>) ind i indstillingerne.
+            </div>
+
+            <div class="help-step">
+                <h4>Trin 4: Find Public Key</h4>
+                Gå til "Account" (klik på dit navn nederst til venstre eller i menuen) → "API Keys".<br>
+                Kopier <strong>Public Key</strong> (f.eks. <code>user_1234...</code>) ind i indstillingerne.
+            </div>
         </div>
     </div>
 </div>
@@ -302,33 +327,24 @@
 <div id="item-container" class="item-list"></div>
 
 <script>
-    // --- KONFIGURATION AF MODES ---
+    // --- KONFIGURATION ---
     const MODES = {
         car: {
-            title: "Biler",
-            color: "#0047b3",
-            bg: "#e3f2fd",
+            title: "Biler", color: "#0047b3", bg: "#e3f2fd", icon: "🚗",
             apiBase: "https://www.dba.dk/mobility/search/api/search/SEARCH_ID_CAR_USED",
             defaultParams: "?location=0.200003&location=0.200004&price_to=30000",
-            icon: "🚗",
             storageKey: "dba_master_car"
         },
         boat: {
-            title: "Både",
-            color: "#0277bd",
-            bg: "#e1f5fe",
+            title: "Både", color: "#0277bd", bg: "#e1f5fe", icon: "⚓",
             apiBase: "https://www.dba.dk/mobility/search/api/search/SEARCH_ID_BOAT_USED",
             defaultParams: "?class=2188&price_to=100000",
-            icon: "⚓",
             storageKey: "dba_master_boat"
         },
         general: {
-            title: "Ting",
-            color: "#6a1b9a",
-            bg: "#f3e5f5",
+            title: "Ting", color: "#6a1b9a", bg: "#f3e5f5", icon: "📦",
             apiBase: "https://www.dba.dk/recommerce/forsale/search/api/search/SEARCH_ID_BAP_COMMON",
             defaultParams: "?q=gratis", 
-            icon: "📦",
             storageKey: "dba_master_general"
         }
     };
@@ -337,85 +353,94 @@
     const NOTIFICATION_SOUND = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
     // --- STATE ---
-    let currentMode = 'car'; // Default start mode
+    let currentMode = 'car';
     let seenIds = new Set();
     let isFirstLoad = true;
     let timerId = null;
     let isRunning = false;
+    let titleInterval = null;
+    let originalTitle = document.title;
     
-    // Config object (Runtime)
+    // Config object
     let config = {
-        service: '', template: '', public: '', // Shared settings
-        emailEnabled: false, customUrl: '', intervalMinutes: 2 // Mode specific settings
+        service: '', template: '', public: '',
+        emailEnabled: false, soundEnabled: true, customUrl: '', intervalMinutes: 2
     };
 
     // --- INITIALIZATION ---
     window.onload = function() {
-        // Hent sidst brugte mode eller default
         const lastMode = localStorage.getItem('dba_master_last_mode');
-        if (lastMode && MODES[lastMode]) {
-            changeMode(lastMode);
-        } else {
-            changeMode('car');
-        }
+        if (lastMode && MODES[lastMode]) changeMode(lastMode);
+        else changeMode('car');
     };
+
+    // --- TITLE FLASHING ---
+    function startTitleFlash(text) {
+        if (titleInterval) return;
+        let flash = false;
+        originalTitle = document.title;
+        titleInterval = setInterval(() => {
+            document.title = flash ? originalTitle : text;
+            flash = !flash;
+        }, 1000);
+        window.addEventListener('focus', stopTitleFlash, { once: true });
+        window.addEventListener('click', stopTitleFlash, { once: true });
+    }
+
+    function stopTitleFlash() {
+        clearInterval(titleInterval);
+        titleInterval = null;
+        document.title = originalTitle;
+    }
 
     // --- MODE SWITCHING ---
     function changeMode(mode) {
         if (!MODES[mode]) return;
         currentMode = mode;
-        
-        // Gem valg
         localStorage.setItem('dba_master_last_mode', mode);
 
-        // Opdater UI Styles
         const theme = MODES[mode];
         document.documentElement.style.setProperty('--primary-color', theme.color);
         document.documentElement.style.setProperty('--bg-color', theme.bg);
         
-        // Opdater knapper
         document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(`btn-${mode}`).classList.add('active');
 
-        // Opdater Tekster & Ikoner
-        document.getElementById('page-title').innerText = `DBA ${theme.title} Overvågning`;
-        document.getElementById('settings-mode-title').innerText = `Søgning (${theme.title})`;
+        const pageTitle = `DBA ${theme.title} Overvågning`;
+        document.getElementById('page-title').innerText = pageTitle;
+        originalTitle = pageTitle; 
+        document.title = pageTitle;
         
-        // Opdater Favicon
+        document.getElementById('settings-mode-title').innerText = `Søgning (${theme.title})`;
         const favicon = document.getElementById('favicon');
         favicon.href = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>${theme.icon}</text></svg>`;
 
-        // Stop igangværende overvågning ved skift
         stopMonitoring();
-        
-        // Ryd listen (valgfrit - her rydder vi for ikke at blande biler og både)
         document.getElementById('item-container').innerHTML = '';
         seenIds.clear();
         isFirstLoad = true;
 
-        // Indlæs indstillinger for den nye mode
         loadSettings();
     }
 
-    // --- SETTINGS MANAGEMENT ---
+    // --- SETTINGS ---
     function loadSettings() {
-        // Shared Settings (Email Keys)
         config.service = localStorage.getItem('dba_master_email_service') || '';
         config.template = localStorage.getItem('dba_master_email_template') || '';
         config.public = localStorage.getItem('dba_master_email_public') || '';
 
-        // Mode Specific Settings
         const prefix = MODES[currentMode].storageKey;
         config.emailEnabled = (localStorage.getItem(`${prefix}_email_enabled`) === 'true');
-        config.customUrl = localStorage.getItem(`${prefix}_url`) || ''; // Vi gemmer URL her i Master App
+        config.soundEnabled = (localStorage.getItem(`${prefix}_sound_enabled`) !== 'false'); 
+        config.customUrl = localStorage.getItem(`${prefix}_url`) || ''; 
         const savedInterval = localStorage.getItem(`${prefix}_interval`);
         config.intervalMinutes = savedInterval ? parseInt(savedInterval) : 2;
 
-        // Populate Modal Fields
         document.getElementById('inp-service').value = config.service;
         document.getElementById('inp-template').value = config.template;
         document.getElementById('inp-public').value = config.public;
         document.getElementById('inp-email-enabled').checked = config.emailEnabled;
+        document.getElementById('inp-sound-enabled').checked = config.soundEnabled;
         document.getElementById('inp-custom-url').value = config.customUrl;
         document.getElementById('inp-interval').value = config.intervalMinutes;
         updateSliderVal(config.intervalMinutes);
@@ -428,37 +453,39 @@
     }
 
     function saveSettings() {
-        // Get values
         const service = document.getElementById('inp-service').value.trim();
         const template = document.getElementById('inp-template').value.trim();
         const publicK = document.getElementById('inp-public').value.trim();
         const emailEnabled = document.getElementById('inp-email-enabled').checked;
+        const soundEnabled = document.getElementById('inp-sound-enabled').checked;
         const customUrl = document.getElementById('inp-custom-url').value.trim();
         const interval = parseInt(document.getElementById('inp-interval').value);
 
-        // Save Shared
         localStorage.setItem('dba_master_email_service', service);
         localStorage.setItem('dba_master_email_template', template);
         localStorage.setItem('dba_master_email_public', publicK);
 
-        // Save Mode Specific
         const prefix = MODES[currentMode].storageKey;
         localStorage.setItem(`${prefix}_email_enabled`, emailEnabled);
+        localStorage.setItem(`${prefix}_sound_enabled`, soundEnabled);
         localStorage.setItem(`${prefix}_url`, customUrl);
         localStorage.setItem(`${prefix}_interval`, interval);
 
-        // Update runtime config
-        config.service = service; config.template = template; config.public = publicK;
-        config.emailEnabled = emailEnabled; config.customUrl = customUrl; config.intervalMinutes = interval;
+        config = { service, template, public: publicK, emailEnabled, soundEnabled, customUrl, intervalMinutes: interval };
 
         if (publicK) try { emailjs.init(publicK); } catch(e) {}
 
         updateConfigStatus();
         closeModal('settingsModal');
         alert("Indstillinger gemt for " + MODES[currentMode].title);
+        
+        if (isRunning) {
+            clearInterval(timerId);
+            fetchItems();
+            timerId = setInterval(fetchItems, config.intervalMinutes * 60000);
+        }
     }
 
-    // --- UI HELPERS ---
     function updateSliderVal(val) { document.getElementById('interval-val').innerText = val + " min."; }
     function openModal(id) { document.getElementById(id).style.display = 'block'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
@@ -467,36 +494,66 @@
     function updateConfigStatus() {
         const el = document.getElementById('config-status');
         let html = `<span class="config-item"><i class="fa-solid fa-stopwatch"></i> ${config.intervalMinutes} min</span>`;
-        
         if(config.customUrl) html += ` | <span class="config-item config-ok"><i class="fa-solid fa-link"></i> URL</span>`;
         else html += ` | <span class="config-item config-missing"><i class="fa-solid fa-link-slash"></i> Ingen URL</span>`;
-
+        if(config.soundEnabled) html += ` | <span class="config-item config-ok"><i class="fa-solid fa-volume-high"></i> Lyd</span>`;
+        else html += ` | <span class="config-item" style="color:#aaa;"><i class="fa-solid fa-volume-xmark"></i> Lyd</span>`;
+        
         if(config.emailEnabled) {
             if(config.service && config.public) html += ` | <span class="config-item config-ok"><i class="fa-solid fa-envelope"></i> Email</span>`;
-            else html += ` | <span class="config-item config-missing"><i class="fa-solid fa-envelope"></i> Mangler nøgler</span>`;
+            else html += ` | <span class="config-item config-missing"><i class="fa-solid fa-envelope"></i> Nøgler mangler</span>`;
         }
         el.innerHTML = html;
     }
 
-    // --- MONITORING LOGIC ---
-    async function startMonitoring() {
-        // Request notification permission
-        if ("Notification" in window) {
-            Notification.requestPermission();
-        }
+    function showToast(item) {
+        const container = document.getElementById('toast-container');
+        let imgUrl = 'https://placehold.co/60x60?text=No+Img';
+        if (item.image?.url) imgUrl = item.image.url;
+        else if (item.images?.[0]?.url) imgUrl = item.images[0].url;
+        else if (item.image_urls?.[0]) imgUrl = item.image_urls[0];
 
-        const btn = document.getElementById('start-btn');
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-tower-broadcast"></i> Overvågning Kører...';
-        btn.style.backgroundColor = "#4caf50";
+        const price = item.price ? `${item.price.amount.toLocaleString('da-DK')} kr.` : 'Pris?';
+
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.innerHTML = `
+            <img src="${imgUrl}" class="toast-img">
+            <div class="toast-content">
+                <div class="toast-title">${item.heading}</div>
+                <div class="toast-price">${price}</div>
+                <div class="toast-meta">Klik for at se</div>
+            </div>
+        `;
+        toast.onclick = () => window.open(item.canonical_url, '_blank');
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 6000);
+    }
+
+    // --- MONITORING ---
+    function toggleMonitoring() {
+        if (isRunning) {
+            stopMonitoring();
+        } else {
+            startMonitoring();
+        }
+    }
+
+    async function startMonitoring() {
+        if ("Notification" in window) Notification.requestPermission();
+
+        const btn = document.getElementById('toggle-btn');
+        btn.innerHTML = '<i class="fa-solid fa-stop"></i> STOP Overvågning';
+        btn.classList.add('running');
         isRunning = true;
         
-        // Unlock Audio
-        NOTIFICATION_SOUND.volume = 0.5;
-        NOTIFICATION_SOUND.play().then(() => {
-            NOTIFICATION_SOUND.pause();
-            NOTIFICATION_SOUND.currentTime = 0;
-        }).catch(e => {});
+        if (config.soundEnabled) {
+            NOTIFICATION_SOUND.volume = 0.5;
+            NOTIFICATION_SOUND.play().then(() => {
+                NOTIFICATION_SOUND.pause();
+                NOTIFICATION_SOUND.currentTime = 0;
+            }).catch(e => {});
+        }
 
         await fetchItems();
 
@@ -507,32 +564,10 @@
     function stopMonitoring() {
         isRunning = false;
         if(timerId) clearInterval(timerId);
-        const btn = document.getElementById('start-btn');
-        btn.disabled = false;
+        const btn = document.getElementById('toggle-btn');
         btn.innerHTML = '<i class="fa-solid fa-play"></i> Aktiver Lyd, Notifikationer & Start';
-        btn.style.backgroundColor = "#ff9800";
+        btn.classList.remove('running');
         document.getElementById('status-text').innerText = "Stoppet / Klar";
-    }
-
-    function testNotification() {
-        if (!("Notification" in window)) {
-            alert("Din browser understøtter ikke notifikationer.");
-            return;
-        }
-
-        Notification.requestPermission().then(permission => {
-            if (permission === "granted") {
-                new Notification("DBA Test Notifikation", {
-                    body: "Hvis du ser denne, virker systemet! 🎉",
-                    icon: "https://placehold.co/100x100?text=Test"
-                });
-                // Spil også lyden for at teste den
-                NOTIFICATION_SOUND.currentTime = 0;
-                NOTIFICATION_SOUND.play().catch(e => console.log("Lyd kræver bruger-interaktion først (klik start)"));
-            } else {
-                alert("Du har blokeret notifikationer. Tjek browserens indstillinger (hængelåsen ved URL'en).");
-            }
-        });
     }
 
     async function fetchItems() {
@@ -541,13 +576,9 @@
         document.getElementById('error-msg').style.display = 'none';
 
         try {
-            // URL Logic
             let queryParams = "";
-            
-            // Hvis custom URL er sat, brug den. Ellers brug default for modet.
             let inputUrl = config.customUrl || MODES[currentMode].defaultParams;
 
-            // Rens URL hvis bruger har pastet hele DBA linket
             if (inputUrl.includes("?")) {
                 const parts = inputUrl.split('?');
                 if (parts.length > 1) queryParams = "?" + parts[1];
@@ -568,7 +599,6 @@
             
             const data = await response.json();
             
-            // Opdater titel fra data hvis muligt
             if(data.metadata && (data.metadata.title || (data.metadata.descriptions && data.metadata.descriptions.heading))) {
                 const apiTitle = data.metadata.descriptions?.heading || data.metadata.title;
                 document.getElementById('page-title').innerText = apiTitle;
@@ -607,13 +637,13 @@
                     card.insertAdjacentHTML('afterbegin', '<div class="badge-new">NY!</div>');
                     
                     if(config.emailEnabled) sendEmail(item);
-                    
-                    // Browser Notification
+                    showToast(item);
+
                     if (Notification.permission === "granted") {
                         const notif = new Notification("Ny DBA Annonce!", {
                             body: item.heading,
                             icon: item.image?.url || item.images?.[0]?.url,
-                            silent: true // Vi bruger egen lyd
+                            silent: true
                         });
                         notif.onclick = () => window.open(item.canonical_url, '_blank');
                     }
@@ -622,8 +652,16 @@
             }
         });
 
+        // BEGRÆNS TIL 50 KORT
+        while (container.children.length > 50) {
+            container.removeChild(container.lastElementChild);
+        }
+
         updateTimeAgo();
-        if (newFound) playSound();
+        if (newFound) {
+            if (config.soundEnabled) playSound();
+            startTitleFlash("🔔 NYT FUND! 🔔");
+        }
         isFirstLoad = false;
     }
 
@@ -631,7 +669,6 @@
         const div = document.createElement('div');
         div.className = 'item-card';
 
-        // Image Logic
         let imgUrl = 'https://placehold.co/600x400?text=Ingen+Billede';
         if (item.image?.url) imgUrl = item.image.url;
         else if (item.images?.[0]?.url) imgUrl = item.images[0].url;
@@ -641,7 +678,6 @@
         const location = item.location || (item.contact_info?.city) || '';
         const timeAgo = getRelativeTime(item.timestamp);
 
-        // DATA FIELDS BASED ON MODE
         let infoHtml = '';
         const year = item.year || 'N/A';
 
@@ -653,9 +689,6 @@
             const fod = item.length ? item.length : '?';
             infoHtml = `<span><i class="fa-regular fa-calendar"></i> ${year}</span>
                         <span><i class="fa-solid fa-ruler-horizontal"></i> ${fod} fod</span>`;
-        } else {
-            // General - ingen specifikke felter, måske bare dato hvis tilgængelig
-            // Vi viser ingenting ekstra her for at holde det clean
         }
 
         div.innerHTML = `
@@ -698,10 +731,16 @@
     function sendEmail(item) {
         if(!config.service || !config.template || !config.public) return;
         
+        // Henter nuværende søge-titel
+        const searchTitle = document.getElementById('page-title').innerText;
+
         emailjs.send(config.service, config.template, {
+            search_query: searchTitle, // Tilføjet parameter
             heading: item.heading,
             price: item.price?.amount || '',
-            link: item.canonical_url
+            link: item.canonical_url,
+            year: item.year || 'N/A',
+            mileage: item.mileage || item.length || 'N/A'
         }).then(
             () => document.getElementById('email-log').innerHTML = `<span style="color:#fff">Mail sendt</span>`,
             (err) => console.error("Mail fejl", err)
