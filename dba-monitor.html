@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DBA Monitor</title>
+    
+    <!-- EmailJS Bibliotek -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    
+    <!-- Font Awesome Ikoner -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Stopper Favicon 404 fejl -->
+    <link rel="icon" href="data:,">
+
+    <style>
+        /* --- GRUNDLÆGGENDE STIL --- */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3e5f5; margin: 0; padding: 20px; }
+        
+        /* --- HEADER DESIGN --- */
+        header {
+            background-color: #6a1b9a; /* Lilla farve */
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .header-content { display: flex; flex-direction: column; gap: 5px; }
+        h1 { margin: 0; font-size: 1.5em; padding-right: 80px; }
+        .status-bar { font-size: 0.9em; opacity: 0.9; }
+        
+        .config-status { font-size: 0.8em; font-weight: bold; margin-top: 3px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .config-item { display: inline-flex; align-items: center; gap: 4px; }
+        .config-ok { color: #81c784; }
+        .config-missing { color: #ffcc80; }
+
+        /* --- KNAPPER OG IKONER --- */
+        .top-icons {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.8);
+            font-size: 1.4em;
+            cursor: pointer;
+            transition: all 0.2s;
+            padding: 5px;
+        }
+        .icon-btn:hover { color: #fff; transform: scale(1.1); }
+
+        .main-controls { margin-top: 10px; }
+        
+        button.action-btn {
+            padding: 10px 20px; border: none; color: white;
+            font-weight: bold; cursor: pointer; border-radius: 4px; font-size: 0.9em;
+            transition: background-color 0.2s;
+            white-space: nowrap;
+            display: inline-flex; align-items: center; gap: 8px;
+        }
+        
+        #start-btn { background-color: #ff9800; }
+        #start-btn:hover { background-color: #e68900; }
+        #start-btn:disabled { background-color: #4caf50; cursor: default; }
+
+        /* --- RESPONSIVT DESIGN --- */
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            header { flex-direction: column; align-items: stretch; gap: 15px; padding: 20px 15px; text-align: center; }
+            h1 { padding-right: 0; font-size: 1.3em; margin-top: 20px; }
+            .top-icons { top: 10px; right: 10px; }
+            .config-status { justify-content: center; }
+            button.action-btn { width: 100%; justify-content: center; padding: 12px; }
+        }
+
+        /* --- VARE KORT --- */
+        .item-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+
+        .item-card {
+            background: white; border-radius: 8px; overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.2s;
+            position: relative; display: flex; flex-direction: column;
+        }
+        .item-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .new-entry { border: 2px solid #4caf50; animation: flash 2s ease-out; }
+        @keyframes flash { 0% { background-color: #e8f5e9; } 100% { background-color: white; } }
+        
+        .badge-new {
+            position: absolute; top: 10px; right: 10px;
+            background-color: #4caf50; color: white; padding: 5px 10px;
+            border-radius: 4px; font-size: 0.8em; font-weight: bold; z-index: 10;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .item-image { width: 100%; height: 250px; object-fit: cover; background-color: #eee; }
+        .item-details { padding: 15px; flex-grow: 1; display: flex; flex-direction: column; }
+        .item-title { font-size: 1.1em; font-weight: bold; margin: 0 0 5px 0; color: #333; line-height: 1.3; }
+        
+        .item-time { 
+            font-size: 0.85em; color: #e65100; font-weight: 600; margin-bottom: 10px; 
+            display: flex; align-items: center; gap: 6px;
+        }
+        
+        .item-price { font-size: 1.2em; color: #6a1b9a; font-weight: bold; margin-bottom: 8px; }
+        
+        .item-location { 
+            font-size: 0.9em; color: #666; display: flex; align-items: center; gap: 6px;
+            margin-bottom: 15px; margin-top: auto; 
+        }
+
+        .btn-link {
+            display: block; text-align: center; background-color: #6a1b9a; color: white;
+            text-decoration: none; padding: 10px; border-radius: 4px; font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        .btn-link:hover { background-color: #4a148c; }
+
+        .loading { text-align: center; color: #666; margin-top: 20px; font-style: italic; }
+        .error { color: #721c24; background-color: #f8d7da; padding: 15px; border-radius: 4px; display: none; margin-bottom: 20px; }
+        #email-log { font-size: 0.8em; color: #e1bee7; margin-top: 5px; }
+
+        /* --- MODAL STYLES --- */
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+        .modal-content {
+            background-color: #fff; margin: 5% auto; padding: 25px; border-radius: 8px;
+            width: 90%; max-width: 550px; box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            max-height: 90vh; overflow-y: auto; position: relative;
+        }
+        .close-modal { position: absolute; top: 15px; right: 20px; font-size: 24px; color: #aaa; cursor: pointer; transition: color 0.2s; }
+        .close-modal:hover { color: #333; }
+        
+        .form-section { border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 15px; }
+        .form-section h3 { margin-top: 0; color: #333; font-size: 1.1em; display: flex; align-items: center; gap: 8px; }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9em; }
+        .form-group input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        .form-group small { display: block; color: #777; font-size: 0.8em; margin-top: 2px; }
+        
+        .slider-container { display: flex; align-items: center; gap: 10px; }
+        input[type=range] { flex-grow: 1; cursor: pointer; }
+        .slider-value { font-weight: bold; color: #6a1b9a; min-width: 80px; text-align: right; }
+
+        .checkbox-group { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .checkbox-group input { width: 18px; height: 18px; cursor: pointer; }
+        .checkbox-group label { cursor: pointer; margin: 0; }
+
+        .save-btn { background-color: #4caf50; width: 100%; margin-top: 10px; display: flex; justify-content: center; gap: 8px; }
+
+        /* --- HELP CONTENT STYLES --- */
+        .help-step { margin-bottom: 15px; border-left: 3px solid #6a1b9a; padding-left: 10px; }
+        .help-step h4 { margin: 0 0 5px 0; color: #6a1b9a; }
+        .code-block { background: #f1f1f1; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.9em; color: #333; display: block; margin-top: 5px; white-space: pre-wrap; word-break: break-all; }
+        .help-link { color: #6a1b9a; text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<header>
+    <!-- Top Højre Ikoner -->
+    <div class="top-icons">
+        <button class="icon-btn" onclick="openModal('settingsModal')" title="Indstillinger">
+            <i class="fa-solid fa-gear"></i>
+        </button>
+        <button class="icon-btn" onclick="openModal('helpModal')" title="Hjælp & Vejledning">
+            <i class="fa-solid fa-circle-question"></i>
+        </button>
+    </div>
+
+    <div class="header-content">
+        <h1 id="page-title">DBA Monitor</h1>
+        <div class="status-bar">Status: <span id="status-text">Afventer URL...</span></div>
+        <div class="config-status" id="config-status">
+            <i class="fa-solid fa-spinner fa-spin"></i> Tjekker indstillinger...
+        </div>
+        <div id="email-log"></div>
+        
+        <div class="main-controls">
+            <button id="start-btn" class="action-btn" onclick="attemptStart()">
+                <i class="fa-solid fa-play"></i> Aktiver Lyd & Start
+            </button>
+        </div>
+    </div>
+</header>
+
+<!-- SETTINGS MODAL -->
+<div id="settingsModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal('settingsModal')"><i class="fa-solid fa-xmark"></i></span>
+        <h2><i class="fa-solid fa-gear"></i> Indstillinger</h2>
+        
+        <div class="form-section">
+            <h3><i class="fa-solid fa-search"></i> Hvad skal overvåges?</h3>
+            <div class="form-group">
+                <label for="inp-custom-url" style="color:#d32f2f;">DBA Søge-URL (Påkrævet)</label>
+                <input type="text" id="inp-custom-url" placeholder="Indsæt link fra DBA her...">
+                <small>Kopier linket fra din browser, når du har lavet en søgning på DBA.</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="inp-interval">Opdateringsinterval</label>
+                <div class="slider-container">
+                    <input type="range" id="inp-interval" min="1" max="60" value="2" oninput="updateSliderVal(this.value)">
+                    <span id="interval-val" class="slider-value">2 min.</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3><i class="fa-solid fa-envelope"></i> Email Notifikationer</h3>
+            <div class="checkbox-group">
+                <input type="checkbox" id="inp-email-enabled">
+                <label for="inp-email-enabled">Aktiver afsendelse af emails</label>
+            </div>
+            <div class="form-group">
+                <label for="inp-service">Service ID</label>
+                <input type="text" id="inp-service" placeholder="service_...">
+            </div>
+            <div class="form-group">
+                <label for="inp-template">Template ID</label>
+                <input type="text" id="inp-template" placeholder="template_...">
+            </div>
+            <div class="form-group">
+                <label for="inp-public">Public Key</label>
+                <input type="text" id="inp-public" placeholder="user_...">
+            </div>
+        </div>
+        
+        <button class="save-btn action-btn" onclick="saveSettings()">
+            <i class="fa-solid fa-floppy-disk"></i> Gem & Anvend
+        </button>
+    </div>
+</div>
+
+<!-- HELP MODAL -->
+<div id="helpModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal('helpModal')"><i class="fa-solid fa-xmark"></i></span>
+        <h2><i class="fa-solid fa-circle-question"></i> Hjælp & Vejledning</h2>
+        
+        <div class="form-section">
+            <h3>Sådan starter du en søgning</h3>
+            <div class="help-step">
+                <h4>Trin 1: Find din søgning</h4>
+                Gå til <a href="https://www.dba.dk/" target="_blank" class="help-link">DBA.dk</a> og søg efter det du vil overvåge (f.eks. "Hajtand", "Fransk dør", "iPhone 13").<br>
+                Tilpas pris, område osv. indtil du er tilfreds.
+            </div>
+            <div class="help-step">
+                <h4>Trin 2: Kopier linket</h4>
+                Kopier hele adressen (URL'en) oppe i din browser.
+            </div>
+            <div class="help-step">
+                <h4>Trin 3: Indsæt her</h4>
+                Gå til <i class="fa-solid fa-gear"></i> <strong>Indstillinger</strong>, indsæt linket i det øverste felt og tryk Gem.<br>
+                Tryk herefter på <strong>Start</strong>.
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>Sådan opsætter du EmailJS (Gratis)</h3>
+            
+            <div class="help-step">
+                <h4>Trin 1: Opret konto</h4>
+                Gå til <a href="https://www.emailjs.com/" target="_blank" class="help-link">emailjs.com</a> og opret en gratis konto ("Sign Up Free").
+            </div>
+
+            <div class="help-step">
+                <h4>Trin 2: Forbind Gmail (Service ID)</h4>
+                Gå til "Email Services" → "Add New Service" → Vælg "Gmail".<br>
+                Log ind med din Google konto.<br>
+                Kopier <strong>Service ID</strong> (f.eks. <code>service_xyz</code>) ind i indstillingerne her på siden.
+            </div>
+
+            <div class="help-step">
+                <h4>Trin 3: Opret Skabelon (Template ID)</h4>
+                Gå til "Email Templates" → "Create New Template".<br>
+                I emnefeltet ("Subject") skriv: <code>Ny vare: {{heading}}</code><br>
+                I indholdet ("Content") skriv:
+                <span class="code-block">
+Ny vare fundet!
+Overskrift: {{heading}}
+Pris: {{price}}
+Link: {{link}}
+                </span>
+                Klik "Save" og kopier <strong>Template ID</strong> (f.eks. <code>template_abc</code>) ind i indstillingerne.
+            </div>
+
+            <div class="help-step">
+                <h4>Trin 4: Find Public Key</h4>
+                Gå til "Account" (klik på dit navn nederst til venstre eller i menuen) → "API Keys".<br>
+                Kopier <strong>Public Key</strong> (f.eks. <code>user_1234...</code>) ind i indstillingerne.
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="error-msg" class="error"></div>
+<div id="loading" class="loading" style="display:none;">
+    <i class="fa-solid fa-circle-notch fa-spin"></i> Henter data fra DBA...
+</div>
+<div id="item-container" class="item-list"></div>
+
+<script>
+    // --- KONFIGURATION (BAP / GENERELL) ---
+    const PROXY_URL = "https://corsproxy.io/?"; 
+    const NOTIFICATION_SOUND = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+
+    // --- STATE ---
+    let seenIds = new Set();
+    let isFirstLoad = true;
+    let timerId = null;
+    let isRunning = false;
+    
+    // Config object - OBS: Bruger "dba_bap_" præfix i localstorage, MEN URL gemmes IKKE
+    let config = {
+        service: '', template: '', public: '', emailEnabled: false, customUrl: '', intervalMinutes: 2
+    };
+
+    // --- LOAD SETTINGS ON STARTUP ---
+    window.onload = function() {
+        loadSettings();
+    };
+
+    function loadSettings() {
+        // Hent email indstillinger (BAP specifikke)
+        config.service = localStorage.getItem('dba_bap_email_service') || '';
+        config.template = localStorage.getItem('dba_bap_email_template') || '';
+        config.public = localStorage.getItem('dba_bap_email_public') || '';
+        config.emailEnabled = (localStorage.getItem('dba_bap_email_enabled') === 'true'); 
+        
+        // Interval
+        const savedInterval = localStorage.getItem('dba_bap_interval');
+        config.intervalMinutes = savedInterval ? parseInt(savedInterval) : 2;
+
+        // Custom URL gemmes IKKE i LS, så den er tom ved start
+        config.customUrl = '';
+
+        // Udfyld felter i modal
+        document.getElementById('inp-service').value = config.service;
+        document.getElementById('inp-template').value = config.template;
+        document.getElementById('inp-public').value = config.public;
+        document.getElementById('inp-email-enabled').checked = config.emailEnabled;
+        document.getElementById('inp-custom-url').value = ''; // Altid tom ved start
+        document.getElementById('inp-interval').value = config.intervalMinutes;
+        updateSliderVal(config.intervalMinutes);
+
+        updateConfigStatus();
+
+        if (config.public) {
+            try { emailjs.init(config.public); } 
+            catch(e) { console.warn("EmailJS init fejl:", e); }
+        }
+    }
+
+    function saveSettings() {
+        const service = document.getElementById('inp-service').value.trim();
+        const template = document.getElementById('inp-template').value.trim();
+        const publicK = document.getElementById('inp-public').value.trim();
+        const emailEnabled = document.getElementById('inp-email-enabled').checked;
+        const interval = parseInt(document.getElementById('inp-interval').value);
+        
+        // URL'en gemmes kun i memory, ikke i LocalStorage
+        const urlInput = document.getElementById('inp-custom-url').value.trim();
+
+        // Gem kun email + interval
+        localStorage.setItem('dba_bap_email_service', service);
+        localStorage.setItem('dba_bap_email_template', template);
+        localStorage.setItem('dba_bap_email_public', publicK);
+        localStorage.setItem('dba_bap_email_enabled', emailEnabled);
+        localStorage.setItem('dba_bap_interval', interval);
+
+        config = { service, template, public: publicK, emailEnabled, customUrl: urlInput, intervalMinutes: interval };
+        
+        if (publicK) {
+            try { emailjs.init(publicK); } catch(e) {}
+        }
+
+        updateConfigStatus();
+        closeModal('settingsModal');
+        
+        // Hvis bruger har indtastet URL og vi kører, genstart. 
+        // Hvis vi ikke kører, gør intet (venter på "Start" knap).
+        if (isRunning && config.customUrl) {
+            clearInterval(timerId);
+            fetchItems(); 
+            timerId = setInterval(fetchItems, config.intervalMinutes * 60000);
+        } else if (config.customUrl) {
+             // Hvis URL er sat, opdater status tekst så bruger ved de kan starte
+             document.getElementById('status-text').innerText = "URL sat. Klar til start.";
+        }
+        
+        alert(`Indstillinger opdateret.`);
+    }
+
+    function updateSliderVal(val) {
+        document.getElementById('interval-val').innerText = val + " min.";
+    }
+
+    function updateConfigStatus() {
+        const statusEl = document.getElementById('config-status');
+        let statusText = `<span class="config-item"><i class="fa-solid fa-stopwatch"></i> ${config.intervalMinutes} min.</span>`;
+        
+        if (config.customUrl) {
+            statusText += ' | <span class="config-item config-ok"><i class="fa-solid fa-link"></i> URL Klar</span>';
+        } else {
+            statusText += ' | <span class="config-item config-missing"><i class="fa-solid fa-link-slash"></i> Mangler URL</span>';
+        }
+
+        if (config.emailEnabled) {
+            if (config.service && config.template && config.public) {
+                statusText += ' | <span class="config-item config-ok"><i class="fa-solid fa-circle-check"></i> Email Aktiv</span>';
+            } else {
+                statusText += ' | <span class="config-item config-missing"><i class="fa-solid fa-circle-exclamation"></i> Email mangler nøgler</span>';
+            }
+        } else {
+            statusText += ' | <span class="config-item" style="color:#aaa;"><i class="fa-solid fa-bell-slash"></i> Email Slukket</span>';
+        }
+        statusEl.innerHTML = statusText;
+    }
+
+    function openModal(modalId) { document.getElementById(modalId).style.display = 'block'; }
+    function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
+    window.onclick = function(event) { 
+        if (event.target.classList.contains('modal')) event.target.style.display = 'none'; 
+    }
+
+    // --- START LOGIC ---
+    function attemptStart() {
+        if (!config.customUrl) {
+            alert("Du skal indtaste en DBA Søge-URL i indstillingerne før du kan starte.");
+            openModal('settingsModal');
+            return;
+        }
+        startMonitoring();
+    }
+
+    async function startMonitoring() {
+        const btn = document.getElementById('start-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-tower-broadcast"></i> Overvågning Kører';
+        btn.style.backgroundColor = "#4caf50";
+        isRunning = true;
+        
+        NOTIFICATION_SOUND.volume = 0.5;
+        NOTIFICATION_SOUND.play().then(() => {
+            NOTIFICATION_SOUND.pause();
+            NOTIFICATION_SOUND.currentTime = 0;
+        }).catch(e => console.log("Lyd-initiering:", e));
+
+        await fetchItems();
+
+        if (timerId) clearInterval(timerId);
+        timerId = setInterval(fetchItems, config.intervalMinutes * 60000);
+    }
+
+    async function fetchItems() {
+        const statusText = document.getElementById('status-text');
+        const loadingDiv = document.getElementById('loading');
+        const errorDiv = document.getElementById('error-msg');
+        const titleEl = document.getElementById('page-title');
+        
+        loadingDiv.style.display = 'block';
+        errorDiv.style.display = 'none';
+
+        try {
+            // URL LOGIK
+            let queryParams = "";
+            
+            if (config.customUrl.includes("?")) {
+                const parts = config.customUrl.split('?');
+                if (parts.length > 1) queryParams = "?" + parts[1];
+            } else if (!config.customUrl.startsWith("http")) {
+                queryParams = "?" + config.customUrl;
+            }
+
+            const apiBase = "https://www.dba.dk/recommerce/forsale/search/api/search/SEARCH_ID_BAP_COMMON";
+            const timestamp = new Date().getTime();
+            const separator = queryParams.includes('?') ? '&' : '?';
+            const finalDbaUrl = `${apiBase}${queryParams}${separator}_t=${timestamp}`;
+            const finalFetchUrl = PROXY_URL + encodeURIComponent(finalDbaUrl);
+
+            console.log("Fetcher:", finalDbaUrl);
+
+            const response = await fetch(finalFetchUrl);
+            if (!response.ok) throw new Error(`Netværksfejl: ${response.status} (Tjek din URL)`);
+            
+            const data = await response.json();
+            
+            // Dynamisk Titel Opdatering
+            if (data.metadata && data.metadata.descriptions && data.metadata.descriptions.heading) {
+                titleEl.innerText = "Overvåger: " + data.metadata.descriptions.heading;
+            } else if (data.metadata && data.metadata.title) {
+                titleEl.innerText = "Overvåger: " + data.metadata.title;
+            }
+
+            if (data && data.docs) {
+                processItems(data.docs);
+                const now = new Date();
+                statusText.innerText = "Sidst tjekket: " + now.toLocaleTimeString();
+            } else {
+                throw new Error("Ingen annoncer fundet (tomt resultat)");
+            }
+
+        } catch (error) {
+            console.error("Fetch Error:", error);
+            statusText.innerText = "Fejl ved hentning";
+            
+            let tip = "";
+            if (error.message.includes("Failed to fetch")) {
+                tip = "<br>Tip: Tjek 'Allow CORS' plugin.";
+            }
+
+            errorDiv.innerHTML = `<strong>Fejl:</strong> ${error.message}${tip}`;
+            errorDiv.style.display = 'block';
+        } finally {
+            loadingDiv.style.display = 'none';
+        }
+    }
+
+    function processItems(items) {
+        const container = document.getElementById('item-container');
+        let newItemsFound = false;
+        const itemsReversed = [...items].reverse(); 
+
+        itemsReversed.forEach(item => {
+            const itemId = item.id;
+
+            if (!seenIds.has(itemId)) {
+                seenIds.add(itemId);
+                const card = createItemCard(item);
+
+                if (!isFirstLoad) {
+                    newItemsFound = true;
+                    card.classList.add('new-entry');
+                    const badge = document.createElement('div');
+                    badge.className = 'badge-new';
+                    badge.innerText = 'NY!';
+                    card.appendChild(badge);
+
+                    if (config.emailEnabled) sendEmail(item);
+                }
+                container.prepend(card);
+            }
+        });
+
+        updateAllTimes();
+        if (newItemsFound) playNotificationSound();
+        isFirstLoad = false;
+    }
+
+    function updateAllTimes() {
+        const timeElements = document.querySelectorAll('.item-time');
+        timeElements.forEach(el => {
+            const rawTimestamp = el.getAttribute('data-timestamp');
+            if (rawTimestamp) {
+                const ts = parseInt(rawTimestamp);
+                el.innerHTML = '<i class="fa-regular fa-clock"></i> ' + getRelativeTime(ts);
+            }
+        });
+    }
+
+    function getRelativeTime(timestamp) {
+        if (!timestamp) return "Ukendt tid";
+        const now = new Date().getTime();
+        const diffInSeconds = Math.floor((now - timestamp) / 1000);
+
+        if (diffInSeconds < 60) return "Lige nu";
+        const diffInMinutes = Math.floor(diffInSeconds / 60);
+        if (diffInMinutes < 60) return `${diffInMinutes} min. siden`;
+        const diffInHours = Math.floor(diffInMinutes / 60);
+        if (diffInHours < 24) return `${diffInHours} timer siden`;
+        const diffInDays = Math.floor(diffInHours / 24);
+        if (diffInDays === 1) return "1 dag siden";
+        return `${diffInDays} dage siden`;
+    }
+
+    function sendEmail(item) {
+        const logDiv = document.getElementById('email-log');
+        if (!config.service || !config.template || !config.public) {
+            logDiv.innerHTML = `<span style="color:orange"><i class="fa-solid fa-triangle-exclamation"></i> Ny vare, men mail-nøgler mangler.</span>`;
+            return;
+        }
+
+        const templateParams = {
+            heading: item.heading,
+            price: item.price ? `${item.price.amount} kr.` : '?',
+            year: 'N/A',
+            mileage: 'N/A', 
+            link: item.canonical_url
+        };
+
+        emailjs.send(config.service, config.template, templateParams)
+            .then(function(response) {
+                console.log('Email sendt!', response.status);
+                logDiv.innerHTML = `<span style="color:white"><i class="fa-solid fa-check"></i> Email sendt: ${item.heading.substring(0,20)}...</span>`;
+            }, function(error) {
+                console.log('Fejl ved email:', error);
+                logDiv.innerHTML = `<span style="color:#ffcc80"><i class="fa-solid fa-xmark"></i> Email fejl: ${error.text}</span>`;
+            });
+    }
+
+    function createItemCard(item) {
+        const div = document.createElement('div');
+        div.className = 'item-card';
+
+        let imageUrl = 'https://placehold.co/600x400?text=Ingen+Billede';
+        if (item.image && item.image.url) {
+            imageUrl = item.image.url;
+        } else if (item.images && item.images.length > 0) {
+            imageUrl = item.images[0].url;
+        } else if (item.image_urls && item.image_urls.length > 0) {
+            imageUrl = item.image_urls[0];
+        }
+
+        const price = item.price ? `${item.price.amount.toLocaleString('da-DK')} kr.` : 'Pris ikke oplyst';
+        const location = item.location || 'Ukendt sted';
+        const timeAgo = getRelativeTime(item.timestamp);
+
+        div.innerHTML = `
+            <img src="${imageUrl}" alt="${item.heading}" class="item-image">
+            <div class="item-details">
+                <h3 class="item-title">${item.heading}</h3>
+                <div class="item-time" data-timestamp="${item.timestamp}"><i class="fa-regular fa-clock"></i> ${timeAgo}</div>
+                <div class="item-price">${price}</div>
+                <span class="item-location"><i class="fa-solid fa-location-dot"></i> ${location}</span>
+                <a href="${item.canonical_url}" target="_blank" class="btn-link">Se Annonce</a>
+            </div>
+        `;
+        return div;
+    }
+
+    function playNotificationSound() {
+        NOTIFICATION_SOUND.currentTime = 0;
+        NOTIFICATION_SOUND.play().catch(e => console.error("Lydfejl:", e));
+    }
+</script>
+
+</body>
+</html>
