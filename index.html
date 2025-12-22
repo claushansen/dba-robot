@@ -120,15 +120,23 @@
         
         .form-section { border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 15px; }
         .form-section h3 { margin-top: 0; color: #333; font-size: 1.1em; display: flex; align-items: center; gap: 8px; }
+        
+        /* Collapsible Header Style */
+        .collapsible-header { cursor: pointer; justify-content: space-between; user-select: none; }
+        .collapsible-header:hover { opacity: 0.8; }
+        .collapsible-content { display: none; padding-top: 10px; }
+
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9em; }
         .form-group input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
         .form-group small { display: block; color: #777; font-size: 0.8em; margin-top: 2px; }
         .save-btn { background-color: #4caf50; width: 100%; border: none; color: white; padding: 10px; font-weight: bold; cursor: pointer; border-radius: 4px; margin-top: 10px; }
+        .share-btn { background-color: #007bff; width: 100%; border: none; color: white; padding: 10px; font-weight: bold; cursor: pointer; border-radius: 4px; margin-top: 10px; }
         
         /* Checkbox & Slider */
         .checkbox-group { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
         .checkbox-group input { width: 18px; height: 18px; cursor: pointer; }
+        .checkbox-group label { cursor: pointer; }
         .slider-container { display: flex; align-items: center; gap: 10px; }
         input[type=range] { flex-grow: 1; cursor: pointer; }
         .slider-value { font-weight: bold; color: #333; min-width: 60px; text-align: right; }
@@ -237,29 +245,41 @@
                 <input type="checkbox" id="inp-sound-enabled">
                 <label for="inp-sound-enabled">Afspil lyd ved nye fund</label>
             </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="inp-toast-enabled">
+                <label for="inp-toast-enabled">Vis popup beskeder (Toasts)</label>
+            </div>
         </div>
 
+        <!-- COLLAPSIBLE EMAIL SECTION -->
         <div class="form-section">
-            <h3><i class="fa-solid fa-envelope"></i> Email (Deles på tværs)</h3>
-            <div class="checkbox-group">
-                <input type="checkbox" id="inp-email-enabled">
-                <label for="inp-email-enabled">Send mail ved nye fund (kun denne kategori)</label>
-            </div>
-            <div class="form-group">
-                <label>Service ID</label>
-                <input type="text" id="inp-service" placeholder="service_...">
-            </div>
-            <div class="form-group">
-                <label>Template ID</label>
-                <input type="text" id="inp-template" placeholder="template_...">
-            </div>
-            <div class="form-group">
-                <label>Public Key</label>
-                <input type="text" id="inp-public" placeholder="user_...">
+            <h3 class="collapsible-header" onclick="toggleSection('email-section')">
+                <span><i class="fa-solid fa-envelope"></i> Email (Avanceret)</span>
+                <i id="email-section-icon" class="fa-solid fa-chevron-down"></i>
+            </h3>
+            
+            <div id="email-section" class="collapsible-content">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="inp-email-enabled">
+                    <label for="inp-email-enabled">Send mail ved nye fund</label>
+                </div>
+                <div class="form-group">
+                    <label>Service ID</label>
+                    <input type="text" id="inp-service" placeholder="service_...">
+                </div>
+                <div class="form-group">
+                    <label>Template ID</label>
+                    <input type="text" id="inp-template" placeholder="template_...">
+                </div>
+                <div class="form-group">
+                    <label>Public Key</label>
+                    <input type="text" id="inp-public" placeholder="user_...">
+                </div>
             </div>
         </div>
         
         <button class="save-btn" onclick="saveSettings()">Gem Indstillinger</button>
+        <button class="share-btn" onclick="copyShareLink()">🔗 Kopier Bogmærke-link</button>
     </div>
 </div>
 
@@ -364,15 +384,79 @@ Link: {{link}}
     // Config object
     let config = {
         service: '', template: '', public: '',
-        emailEnabled: false, soundEnabled: true, customUrl: '', intervalMinutes: 2
+        emailEnabled: false, soundEnabled: true, toastEnabled: true,
+        customUrl: '', intervalMinutes: 2
     };
 
     // --- INITIALIZATION ---
     window.onload = function() {
+        if(checkForUrlParams()) {
+            console.log("Konfiguration indlæst fra URL");
+        }
         const lastMode = localStorage.getItem('dba_master_last_mode');
         if (lastMode && MODES[lastMode]) changeMode(lastMode);
         else changeMode('car');
     };
+
+    // --- TOGGLE SECTION ---
+    function toggleSection(id) {
+        const el = document.getElementById(id);
+        const icon = document.getElementById(id + '-icon');
+        if (el.style.display === 'block') {
+            el.style.display = 'none';
+            icon.classList.remove('fa-chevron-up');
+            icon.classList.add('fa-chevron-down');
+        } else {
+            el.style.display = 'block';
+            icon.classList.remove('fa-chevron-down');
+            icon.classList.add('fa-chevron-up');
+        }
+    }
+
+    // --- URL PARAMS HANDLER ---
+    function checkForUrlParams() {
+        const params = new URLSearchParams(window.location.search);
+        if (!params.has('mode')) return false;
+
+        const mode = params.get('mode');
+        if(!MODES[mode]) return false;
+
+        localStorage.setItem('dba_master_last_mode', mode);
+
+        // Hent shared settings (MEN IKKE EMAIL KEYS VIA URL PGA SIKKERHED)
+        
+        // Hent mode specifikke settings
+        const prefix = MODES[mode].storageKey;
+        if(params.has('url')) localStorage.setItem(`${prefix}_url`, params.get('url'));
+        if(params.has('interval')) localStorage.setItem(`${prefix}_interval`, params.get('interval'));
+        if(params.has('email')) localStorage.setItem(`${prefix}_email_enabled`, params.get('email'));
+        if(params.has('sound')) localStorage.setItem(`${prefix}_sound_enabled`, params.get('sound'));
+        if(params.has('toast')) localStorage.setItem(`${prefix}_toast_enabled`, params.get('toast'));
+
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return true;
+    }
+
+    function copyShareLink() {
+        const params = new URLSearchParams();
+        params.set('mode', currentMode);
+        
+        // Ingen email keys her!
+        
+        if(config.customUrl) params.set('url', config.customUrl);
+        params.set('interval', config.intervalMinutes);
+        params.set('email', config.emailEnabled);
+        params.set('sound', config.soundEnabled);
+        params.set('toast', config.toastEnabled);
+
+        const shareUrl = window.location.origin + window.location.pathname + '?' + params.toString();
+        
+        navigator.clipboard.writeText(shareUrl).then(() => {
+            alert("Link kopieret! \n\nBemærk: Dine Email-nøgler er IKKE med i linket.");
+        }).catch(err => {
+            alert("Kunne ikke kopiere: " + err);
+        });
+    }
 
     // --- TITLE FLASHING ---
     function startTitleFlash(text) {
@@ -432,6 +516,7 @@ Link: {{link}}
         const prefix = MODES[currentMode].storageKey;
         config.emailEnabled = (localStorage.getItem(`${prefix}_email_enabled`) === 'true');
         config.soundEnabled = (localStorage.getItem(`${prefix}_sound_enabled`) !== 'false'); 
+        config.toastEnabled = (localStorage.getItem(`${prefix}_toast_enabled`) !== 'false');
         config.customUrl = localStorage.getItem(`${prefix}_url`) || ''; 
         const savedInterval = localStorage.getItem(`${prefix}_interval`);
         config.intervalMinutes = savedInterval ? parseInt(savedInterval) : 2;
@@ -441,6 +526,7 @@ Link: {{link}}
         document.getElementById('inp-public').value = config.public;
         document.getElementById('inp-email-enabled').checked = config.emailEnabled;
         document.getElementById('inp-sound-enabled').checked = config.soundEnabled;
+        document.getElementById('inp-toast-enabled').checked = config.toastEnabled;
         document.getElementById('inp-custom-url').value = config.customUrl;
         document.getElementById('inp-interval').value = config.intervalMinutes;
         updateSliderVal(config.intervalMinutes);
@@ -458,6 +544,7 @@ Link: {{link}}
         const publicK = document.getElementById('inp-public').value.trim();
         const emailEnabled = document.getElementById('inp-email-enabled').checked;
         const soundEnabled = document.getElementById('inp-sound-enabled').checked;
+        const toastEnabled = document.getElementById('inp-toast-enabled').checked;
         const customUrl = document.getElementById('inp-custom-url').value.trim();
         const interval = parseInt(document.getElementById('inp-interval').value);
 
@@ -468,10 +555,11 @@ Link: {{link}}
         const prefix = MODES[currentMode].storageKey;
         localStorage.setItem(`${prefix}_email_enabled`, emailEnabled);
         localStorage.setItem(`${prefix}_sound_enabled`, soundEnabled);
+        localStorage.setItem(`${prefix}_toast_enabled`, toastEnabled);
         localStorage.setItem(`${prefix}_url`, customUrl);
         localStorage.setItem(`${prefix}_interval`, interval);
 
-        config = { service, template, public: publicK, emailEnabled, soundEnabled, customUrl, intervalMinutes: interval };
+        config = { service, template, public: publicK, emailEnabled, soundEnabled, toastEnabled, customUrl, intervalMinutes: interval };
 
         if (publicK) try { emailjs.init(publicK); } catch(e) {}
 
@@ -507,6 +595,8 @@ Link: {{link}}
     }
 
     function showToast(item) {
+        if (!config.toastEnabled) return;
+
         const container = document.getElementById('toast-container');
         let imgUrl = 'https://placehold.co/60x60?text=No+Img';
         if (item.image?.url) imgUrl = item.image.url;
@@ -731,11 +821,10 @@ Link: {{link}}
     function sendEmail(item) {
         if(!config.service || !config.template || !config.public) return;
         
-        // Henter nuværende søge-titel
         const searchTitle = document.getElementById('page-title').innerText;
 
         emailjs.send(config.service, config.template, {
-            search_query: searchTitle, // Tilføjet parameter
+            search_query: searchTitle, 
             heading: item.heading,
             price: item.price?.amount || '',
             link: item.canonical_url,
