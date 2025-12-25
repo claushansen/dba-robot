@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DBA Master Monitor</title>
     
-    <!-- EmailJS -->
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -53,6 +51,7 @@
         .status-bar { font-size: 0.9em; opacity: 0.9; margin-top: 5px; }
         .config-status { font-size: 0.8em; font-weight: bold; margin-top: 5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
         .config-item { display: inline-flex; align-items: center; gap: 4px; }
+        .config-ok { color: #81c784; } .config-missing { color: #ffcc80; }
 
         .top-icons { display: flex; gap: 10px; }
         .icon-btn {
@@ -68,7 +67,7 @@
             transition: background 0.2s;
         }
         #toggle-btn:hover { background-color: #e68900; }
-        #toggle-btn.running { background-color: #d32f2f; } /* Rød stop farve */
+        #toggle-btn.running { background-color: #d32f2f; }
         #toggle-btn.running:hover { background-color: #b71c1c; }
 
         /* LIST & CARDS */
@@ -120,10 +119,7 @@
         
         .form-section { border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 15px; }
         .form-section h3 { margin-top: 0; color: #333; font-size: 1.1em; display: flex; align-items: center; gap: 8px; }
-        
-        /* Collapsible Header Style */
         .collapsible-header { cursor: pointer; justify-content: space-between; user-select: none; }
-        .collapsible-header:hover { opacity: 0.8; }
         .collapsible-content { display: none; padding-top: 10px; }
 
         .form-group { margin-bottom: 15px; }
@@ -141,6 +137,10 @@
         input[type=range] { flex-grow: 1; cursor: pointer; }
         .slider-value { font-weight: bold; color: #333; min-width: 60px; text-align: right; }
 
+        /* LOGIN */
+        .login-btn { background-color: #dd4b39; width: 100%; border: none; color: white; padding: 12px; font-weight: bold; cursor: pointer; border-radius: 4px; margin-top: 5px; display: flex; justify-content: center; align-items: center; gap: 10px; }
+        .login-btn:hover { background-color: #c23321; }
+
         /* TOAST */
         #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
         .toast {
@@ -156,10 +156,9 @@
         @keyframes slideIn { to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeOut { to { opacity: 0; transform: translateX(100%); } }
 
-        /* HELP CONTENT STYLES */
+        /* HELP CONTENT */
         .help-step { margin-bottom: 15px; border-left: 3px solid #0047b3; padding-left: 10px; }
         .help-step h4 { margin: 0 0 5px 0; color: #0047b3; }
-        .code-block { background: #f1f1f1; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.9em; color: #333; display: block; margin-top: 5px; white-space: pre-wrap; word-break: break-all; }
         .help-link { color: #0047b3; text-decoration: underline; }
 
         @media (max-width: 600px) {
@@ -177,7 +176,6 @@
 
 <header>
     <div class="top-row">
-        <!-- MODE SWITCHER -->
         <div class="mode-switch">
             <button class="mode-btn active" onclick="changeMode('car')" id="btn-car">
                 <i class="fa-solid fa-car"></i> Biler
@@ -190,7 +188,6 @@
             </button>
         </div>
 
-        <!-- TOP ICONS -->
         <div class="top-icons">
             <button class="icon-btn" onclick="openModal('settingsModal')" title="Indstillinger">
                 <i class="fa-solid fa-gear"></i>
@@ -251,29 +248,26 @@
             </div>
         </div>
 
-        <!-- COLLAPSIBLE EMAIL SECTION -->
+        <!-- GOOGLE LOGIN SECTION (HARDCODED URL) -->
         <div class="form-section">
             <h3 class="collapsible-header" onclick="toggleSection('email-section')">
-                <span><i class="fa-solid fa-envelope"></i> Email (Avanceret)</span>
+                <span><i class="fa-brands fa-google"></i> Gmail Integration</span>
                 <i id="email-section-icon" class="fa-solid fa-chevron-down"></i>
             </h3>
             
             <div id="email-section" class="collapsible-content">
-                <div class="checkbox-group">
+                <div id="login-container">
+                    <p style="font-size:0.9em; margin-bottom:10px;">Forbind din Gmail for at modtage notifikationer.</p>
+                    <button class="login-btn" onclick="connectGoogle()">
+                        <i class="fa-brands fa-google"></i> Forbind med Google
+                    </button>
+                </div>
+                <div id="logged-in-section" style="display:none; color:green; font-weight:bold; margin-top:10px;">
+                    <i class="fa-solid fa-check-circle"></i> Gmail er forbundet
+                </div>
+                <div class="checkbox-group" style="margin-top:15px;">
                     <input type="checkbox" id="inp-email-enabled">
                     <label for="inp-email-enabled">Send mail ved nye fund</label>
-                </div>
-                <div class="form-group">
-                    <label>Service ID</label>
-                    <input type="text" id="inp-service" placeholder="service_...">
-                </div>
-                <div class="form-group">
-                    <label>Template ID</label>
-                    <input type="text" id="inp-template" placeholder="template_...">
-                </div>
-                <div class="form-group">
-                    <label>Public Key</label>
-                    <input type="text" id="inp-public" placeholder="user_...">
                 </div>
             </div>
         </div>
@@ -297,45 +291,22 @@
                 <li><strong>Både:</strong> Viser Årgang og Fod.</li>
                 <li><strong>Ting:</strong> Generel visning for møbler, elektronik osv.</li>
             </ul>
-            <p>Listen viser <strong>maksimalt 50 annoncer</strong> for at holde siden hurtig.</p>
         </div>
 
         <div class="form-section">
-            <h3>Email Opsætning (EmailJS)</h3>
-            
-            <div class="help-step">
-                <h4>Trin 1: Opret konto</h4>
-                Gå til <a href="https://www.emailjs.com/" target="_blank" class="help-link">emailjs.com</a> og opret en gratis konto ("Sign Up Free").
-            </div>
-
-            <div class="help-step">
-                <h4>Trin 2: Forbind Gmail (Service ID)</h4>
-                Gå til "Email Services" → "Add New Service" → Vælg "Gmail".<br>
-                Log ind med din Google konto.<br>
-                Kopier <strong>Service ID</strong> (f.eks. <code>service_xyz</code>) ind i indstillingerne her.
-            </div>
-
-            <div class="help-step">
-                <h4>Trin 3: Opret Skabelon (Template ID)</h4>
-                Gå til "Email Templates" → "Create New Template".<br>
-                I emnefeltet ("Subject") skriv: <code>Ny vare: {{heading}}</code><br>
-                I indholdet ("Content") skriv:
-                <span class="code-block">
-Ny vare fundet!
-Søgning: {{search_query}}
-Model: {{heading}}
-Pris: {{price}}
-Årgang: {{year}}
-Link: {{link}}
-                </span>
-                Klik "Save" og kopier <strong>Template ID</strong> (f.eks. <code>template_abc</code>) ind i indstillingerne.
-            </div>
-
-            <div class="help-step">
-                <h4>Trin 4: Find Public Key</h4>
-                Gå til "Account" (klik på dit navn nederst til venstre eller i menuen) → "API Keys".<br>
-                Kopier <strong>Public Key</strong> (f.eks. <code>user_1234...</code>) ind i indstillingerne.
-            </div>
+            <h3>Sådan laver du en søgning</h3>
+            <ol style="padding-left:20px; line-height:1.6;">
+                <li>Gå til DBA.dk og lav din søgning.</li>
+                <li>Kopier hele adressen (URL'en) fra toppen af browseren.</li>
+                <li>Gå til <strong>Indstillinger</strong> her og sæt linket ind i "DBA Søge-URL".</li>
+                <li>Klik <strong>Gem</strong> og start overvågningen.</li>
+            </ol>
+        </div>
+        
+        <div class="form-section">
+            <h3>Email</h3>
+            <p>Klik på "Forbind med Google" i indstillingerne for at aktivere email-notifikationer. Du skal være logget ind én gang.</p>
+            <p><strong>Obs:</strong> Ingen mails sendes ved første indlæsning - kun når der kommer nye ting.</p>
         </div>
     </div>
 </div>
@@ -347,32 +318,17 @@ Link: {{link}}
 <div id="item-container" class="item-list"></div>
 
 <script>
-    // --- KONFIGURATION ---
-    const MODES = {
-        car: {
-            title: "Biler", color: "#0047b3", bg: "#e3f2fd", icon: "🚗",
-            apiBase: "https://www.dba.dk/mobility/search/api/search/SEARCH_ID_CAR_USED",
-            defaultParams: "?location=0.200003&location=0.200004&price_to=30000",
-            storageKey: "dba_master_car"
-        },
-        boat: {
-            title: "Både", color: "#0277bd", bg: "#e1f5fe", icon: "⚓",
-            apiBase: "https://www.dba.dk/mobility/search/api/search/SEARCH_ID_BOAT_USED",
-            defaultParams: "?class=2188&price_to=100000",
-            storageKey: "dba_master_boat"
-        },
-        general: {
-            title: "Ting", color: "#6a1b9a", bg: "#f3e5f5", icon: "📦",
-            apiBase: "https://www.dba.dk/recommerce/forsale/search/api/search/SEARCH_ID_BAP_COMMON",
-            defaultParams: "?q=gratis", 
-            storageKey: "dba_master_general"
-        }
-    };
+    // --- KONFIGURATION (HARDCODED) ---
+    const CLOUDFLARE_WORKER_URL = "https://cloudflare-g-mailer.webkonsulent-claus-hansen.workers.dev";
 
+    const MODES = {
+        car: { title: "Biler", color: "#0047b3", bg: "#e3f2fd", icon: "🚗", apiBase: "https://www.dba.dk/mobility/search/api/search/SEARCH_ID_CAR_USED", defaultParams: "?location=0.200003&location=0.200004&price_to=30000", storageKey: "dba_master_car" },
+        boat: { title: "Både", color: "#0277bd", bg: "#e1f5fe", icon: "⚓", apiBase: "https://www.dba.dk/mobility/search/api/search/SEARCH_ID_BOAT_USED", defaultParams: "?class=2188&price_to=100000", storageKey: "dba_master_boat" },
+        general: { title: "Ting", color: "#6a1b9a", bg: "#f3e5f5", icon: "📦", apiBase: "https://www.dba.dk/recommerce/forsale/search/api/search/SEARCH_ID_BAP_COMMON", defaultParams: "?q=gratis", storageKey: "dba_master_general" }
+    };
     const PROXY_URL = "https://corsproxy.io/?"; 
     const NOTIFICATION_SOUND = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
-    // --- STATE ---
     let currentMode = 'car';
     let seenIds = new Set();
     let isFirstLoad = true;
@@ -381,24 +337,110 @@ Link: {{link}}
     let titleInterval = null;
     let originalTitle = document.title;
     
-    // Config object
+    // Email Queue System
+    let emailQueue = [];
+    let isProcessingEmail = false;
+    
     let config = {
-        service: '', template: '', public: '',
-        emailEnabled: false, soundEnabled: true, toastEnabled: true,
-        customUrl: '', intervalMinutes: 2
+        emailEnabled: false, soundEnabled: true, toastEnabled: true, customUrl: '', intervalMinutes: 2
     };
+    
+    // Session ID Logic (Generer unikt ID hvis det ikke findes)
+    let userSessionId = localStorage.getItem('dba_session_id');
+    if (!userSessionId) {
+        userSessionId = 'sess_' + Math.random().toString(36).substr(2, 9) + Date.now();
+        localStorage.setItem('dba_session_id', userSessionId);
+    }
 
-    // --- INITIALIZATION ---
     window.onload = function() {
-        if(checkForUrlParams()) {
-            console.log("Konfiguration indlæst fra URL");
-        }
+        if(checkForUrlParams()) console.log("Config from URL");
         const lastMode = localStorage.getItem('dba_master_last_mode');
-        if (lastMode && MODES[lastMode]) changeMode(lastMode);
-        else changeMode('car');
+        if (lastMode && MODES[lastMode]) changeMode(lastMode); else changeMode('car');
+        checkServerLogin(); 
     };
 
-    // --- TOGGLE SECTION ---
+    // --- SERVER COMMUNICATION ---
+    function connectGoogle() {
+        const authUrl = `${CLOUDFLARE_WORKER_URL}/auth?session_id=${userSessionId}`;
+        window.open(authUrl, '_blank', 'width=500,height=600');
+        const checkInterval = setInterval(async () => {
+            const status = await checkServerLogin();
+            if (status) clearInterval(checkInterval);
+        }, 2000);
+    }
+
+    async function checkServerLogin() {
+        try {
+            const res = await fetch(`${CLOUDFLARE_WORKER_URL}/status?session_id=${userSessionId}`);
+            const data = await res.json();
+            if (data.loggedIn) {
+                document.getElementById('login-container').style.display = 'none';
+                document.getElementById('logged-in-section').style.display = 'block';
+                return true;
+            } else {
+                document.getElementById('login-container').style.display = 'block';
+                document.getElementById('logged-in-section').style.display = 'none';
+            }
+        } catch(e) {
+            console.log("Server ikke tilgængelig");
+        }
+        return false;
+    }
+
+    // --- EMAIL QUEUE SYSTEM ---
+    function queueEmail(item) {
+        if(!config.emailEnabled) return;
+        emailQueue.push(item);
+        processEmailQueue();
+    }
+
+    async function processEmailQueue() {
+        if (isProcessingEmail || emailQueue.length === 0) return;
+        
+        isProcessingEmail = true;
+        const item = emailQueue.shift(); // Tag den første i køen
+        
+        await sendServerMail(item);
+        
+        // Vent 2 sekunder før næste mail for at undgå rate limit (429)
+        setTimeout(() => {
+            isProcessingEmail = false;
+            processEmailQueue();
+        }, 2000); 
+    }
+
+    async function sendServerMail(item) {
+        const searchTitle = document.getElementById('page-title').innerText;
+        const emailHtml = `
+            <div style="font-family: sans-serif; color: #333;">
+                <h2 style="color: #0047b3;">Ny vare fundet!</h2>
+                <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                    <tr><td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Overskrift:</strong></td><td style="padding: 8px; border-bottom: 1px solid #ddd;">${item.heading}</td></tr>
+                    <tr><td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Pris:</strong></td><td style="padding: 8px; border-bottom: 1px solid #ddd; color: green; font-weight: bold;">${item.price?.amount || '?'} kr.</td></tr>
+                    <tr><td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Søgning:</strong></td><td style="padding: 8px; border-bottom: 1px solid #ddd;">${searchTitle}</td></tr>
+                </table>
+                <div style="margin-top: 30px; text-align: center;"><a href="${item.canonical_url}" style="background-color: #0047b3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 16px;">Se Annoncen</a></div>
+            </div>
+        `;
+
+        try {
+            await fetch(`${CLOUDFLARE_WORKER_URL}/send`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    session_id: userSessionId, // VIGTIGT!
+                    source: "DBA Monitor",
+                    subject: `${item.heading} (${item.price?.amount || '?'} kr)`,
+                    html: emailHtml
+                })
+            });
+            document.getElementById('email-log').innerHTML = `<span style="color:#fff">Mail sendt</span>`;
+        } catch(e) {
+            console.error("Mail fejl", e);
+        }
+    }
+
+    // --- SHARED LOGIC ---
     function toggleSection(id) {
         const el = document.getElementById(id);
         const icon = document.getElementById(id + '-icon');
@@ -413,144 +455,84 @@ Link: {{link}}
         }
     }
 
-    // --- URL PARAMS HANDLER ---
-    function checkForUrlParams() {
+    function checkForUrlParams() { 
         const params = new URLSearchParams(window.location.search);
         if (!params.has('mode')) return false;
-
         const mode = params.get('mode');
         if(!MODES[mode]) return false;
-
         localStorage.setItem('dba_master_last_mode', mode);
-
-        // Hent shared settings (MEN IKKE EMAIL KEYS VIA URL PGA SIKKERHED)
-        
-        // Hent mode specifikke settings
         const prefix = MODES[mode].storageKey;
         if(params.has('url')) localStorage.setItem(`${prefix}_url`, params.get('url'));
         if(params.has('interval')) localStorage.setItem(`${prefix}_interval`, params.get('interval'));
         if(params.has('email')) localStorage.setItem(`${prefix}_email_enabled`, params.get('email'));
         if(params.has('sound')) localStorage.setItem(`${prefix}_sound_enabled`, params.get('sound'));
         if(params.has('toast')) localStorage.setItem(`${prefix}_toast_enabled`, params.get('toast'));
-
         window.history.replaceState({}, document.title, window.location.pathname);
         return true;
     }
-
+    
     function copyShareLink() {
         const params = new URLSearchParams();
         params.set('mode', currentMode);
-        
-        // Ingen email keys her!
-        
         if(config.customUrl) params.set('url', config.customUrl);
         params.set('interval', config.intervalMinutes);
         params.set('email', config.emailEnabled);
         params.set('sound', config.soundEnabled);
         params.set('toast', config.toastEnabled);
-
         const shareUrl = window.location.origin + window.location.pathname + '?' + params.toString();
-        
-        navigator.clipboard.writeText(shareUrl).then(() => {
-            alert("Link kopieret! \n\nBemærk: Dine Email-nøgler er IKKE med i linket.");
-        }).catch(err => {
-            alert("Kunne ikke kopiere: " + err);
-        });
+        navigator.clipboard.writeText(shareUrl).then(() => alert("Link kopieret!")).catch(err => alert("Fejl: " + err));
     }
 
-    // --- TITLE FLASHING ---
     function startTitleFlash(text) {
         if (titleInterval) return;
-        let flash = false;
-        originalTitle = document.title;
-        titleInterval = setInterval(() => {
-            document.title = flash ? originalTitle : text;
-            flash = !flash;
-        }, 1000);
+        let flash = false; originalTitle = document.title;
+        titleInterval = setInterval(() => { document.title = flash ? originalTitle : text; flash = !flash; }, 1000);
         window.addEventListener('focus', stopTitleFlash, { once: true });
         window.addEventListener('click', stopTitleFlash, { once: true });
     }
+    function stopTitleFlash() { clearInterval(titleInterval); titleInterval = null; document.title = originalTitle; }
 
-    function stopTitleFlash() {
-        clearInterval(titleInterval);
-        titleInterval = null;
-        document.title = originalTitle;
-    }
-
-    // --- MODE SWITCHING ---
     function changeMode(mode) {
         if (!MODES[mode]) return;
-        currentMode = mode;
-        localStorage.setItem('dba_master_last_mode', mode);
-
+        currentMode = mode; localStorage.setItem('dba_master_last_mode', mode);
         const theme = MODES[mode];
         document.documentElement.style.setProperty('--primary-color', theme.color);
         document.documentElement.style.setProperty('--bg-color', theme.bg);
-        
         document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(`btn-${mode}`).classList.add('active');
-
         const pageTitle = `DBA ${theme.title} Overvågning`;
         document.getElementById('page-title').innerText = pageTitle;
-        originalTitle = pageTitle; 
-        document.title = pageTitle;
-        
+        originalTitle = pageTitle; document.title = pageTitle;
         document.getElementById('settings-mode-title').innerText = `Søgning (${theme.title})`;
-        const favicon = document.getElementById('favicon');
-        favicon.href = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>${theme.icon}</text></svg>`;
-
-        stopMonitoring();
-        document.getElementById('item-container').innerHTML = '';
-        seenIds.clear();
-        isFirstLoad = true;
-
+        document.getElementById('favicon').href = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>${theme.icon}</text></svg>`;
+        stopMonitoring(); document.getElementById('item-container').innerHTML = ''; seenIds.clear(); isFirstLoad = true;
         loadSettings();
     }
 
-    // --- SETTINGS ---
     function loadSettings() {
-        config.service = localStorage.getItem('dba_master_email_service') || '';
-        config.template = localStorage.getItem('dba_master_email_template') || '';
-        config.public = localStorage.getItem('dba_master_email_public') || '';
-
         const prefix = MODES[currentMode].storageKey;
         config.emailEnabled = (localStorage.getItem(`${prefix}_email_enabled`) === 'true');
-        config.soundEnabled = (localStorage.getItem(`${prefix}_sound_enabled`) !== 'false'); 
+        config.soundEnabled = (localStorage.getItem(`${prefix}_sound_enabled`) !== 'false');
         config.toastEnabled = (localStorage.getItem(`${prefix}_toast_enabled`) !== 'false');
-        config.customUrl = localStorage.getItem(`${prefix}_url`) || ''; 
+        config.customUrl = localStorage.getItem(`${prefix}_url`) || '';
         const savedInterval = localStorage.getItem(`${prefix}_interval`);
         config.intervalMinutes = savedInterval ? parseInt(savedInterval) : 2;
-
-        document.getElementById('inp-service').value = config.service;
-        document.getElementById('inp-template').value = config.template;
-        document.getElementById('inp-public').value = config.public;
+        
         document.getElementById('inp-email-enabled').checked = config.emailEnabled;
         document.getElementById('inp-sound-enabled').checked = config.soundEnabled;
         document.getElementById('inp-toast-enabled').checked = config.toastEnabled;
         document.getElementById('inp-custom-url').value = config.customUrl;
         document.getElementById('inp-interval').value = config.intervalMinutes;
         updateSliderVal(config.intervalMinutes);
-
         updateConfigStatus();
-
-        if (config.public) {
-            try { emailjs.init(config.public); } catch(e) {}
-        }
     }
 
     function saveSettings() {
-        const service = document.getElementById('inp-service').value.trim();
-        const template = document.getElementById('inp-template').value.trim();
-        const publicK = document.getElementById('inp-public').value.trim();
         const emailEnabled = document.getElementById('inp-email-enabled').checked;
         const soundEnabled = document.getElementById('inp-sound-enabled').checked;
         const toastEnabled = document.getElementById('inp-toast-enabled').checked;
         const customUrl = document.getElementById('inp-custom-url').value.trim();
         const interval = parseInt(document.getElementById('inp-interval').value);
-
-        localStorage.setItem('dba_master_email_service', service);
-        localStorage.setItem('dba_master_email_template', template);
-        localStorage.setItem('dba_master_email_public', publicK);
 
         const prefix = MODES[currentMode].storageKey;
         localStorage.setItem(`${prefix}_email_enabled`, emailEnabled);
@@ -559,13 +541,17 @@ Link: {{link}}
         localStorage.setItem(`${prefix}_url`, customUrl);
         localStorage.setItem(`${prefix}_interval`, interval);
 
-        config = { service, template, public: publicK, emailEnabled, soundEnabled, toastEnabled, customUrl, intervalMinutes: interval };
+        config = { emailEnabled, soundEnabled, toastEnabled, customUrl, intervalMinutes: interval };
 
-        if (publicK) try { emailjs.init(publicK); } catch(e) {}
+        // LOGIC FOR RESETTING WHEN SAVING
+        seenIds.clear();
+        document.getElementById('item-container').innerHTML = '';
+        isFirstLoad = true;
+        emailQueue = [];
 
         updateConfigStatus();
         closeModal('settingsModal');
-        alert("Indstillinger gemt for " + MODES[currentMode].title);
+        alert("Indstillinger gemt! Listen nulstilles.");
         
         if (isRunning) {
             clearInterval(timerId);
@@ -587,16 +573,12 @@ Link: {{link}}
         if(config.soundEnabled) html += ` | <span class="config-item config-ok"><i class="fa-solid fa-volume-high"></i> Lyd</span>`;
         else html += ` | <span class="config-item" style="color:#aaa;"><i class="fa-solid fa-volume-xmark"></i> Lyd</span>`;
         
-        if(config.emailEnabled) {
-            if(config.service && config.public) html += ` | <span class="config-item config-ok"><i class="fa-solid fa-envelope"></i> Email</span>`;
-            else html += ` | <span class="config-item config-missing"><i class="fa-solid fa-envelope"></i> Nøgler mangler</span>`;
-        }
+        if(config.emailEnabled) html += ` | <span class="config-item config-ok"><i class="fa-solid fa-envelope"></i> Email</span>`;
         el.innerHTML = html;
     }
 
     function showToast(item) {
         if (!config.toastEnabled) return;
-
         const container = document.getElementById('toast-container');
         let imgUrl = 'https://placehold.co/60x60?text=No+Img';
         if (item.image?.url) imgUrl = item.image.url;
@@ -726,7 +708,9 @@ Link: {{link}}
                     card.classList.add('new-entry');
                     card.insertAdjacentHTML('afterbegin', '<div class="badge-new">NY!</div>');
                     
-                    if(config.emailEnabled) sendEmail(item);
+                    // Queue email instead of sending immediately to avoid 429
+                    queueEmail(item);
+                    
                     showToast(item);
 
                     if (Notification.permission === "granted") {
@@ -816,24 +800,6 @@ Link: {{link}}
     function playSound() {
         NOTIFICATION_SOUND.currentTime = 0;
         NOTIFICATION_SOUND.play().catch(e => {});
-    }
-
-    function sendEmail(item) {
-        if(!config.service || !config.template || !config.public) return;
-        
-        const searchTitle = document.getElementById('page-title').innerText;
-
-        emailjs.send(config.service, config.template, {
-            search_query: searchTitle, 
-            heading: item.heading,
-            price: item.price?.amount || '',
-            link: item.canonical_url,
-            year: item.year || 'N/A',
-            mileage: item.mileage || item.length || 'N/A'
-        }).then(
-            () => document.getElementById('email-log').innerHTML = `<span style="color:#fff">Mail sendt</span>`,
-            (err) => console.error("Mail fejl", err)
-        );
     }
 </script>
 
