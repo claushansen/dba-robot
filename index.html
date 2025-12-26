@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DBA Master Monitor</title>
+    <title>DBA Monitor</title>
     
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -199,7 +199,7 @@
     </div>
 
     <div class="header-content">
-        <h1 id="page-title">DBA Bil Overvågning</h1>
+        <h1 id="page-title">DBA Overvågning</h1>
         <div class="status-bar">Status: <span id="status-text">Klar til start</span></div>
         <div class="config-status" id="config-status">Indlæser...</div>
         <div id="email-log"></div>
@@ -323,7 +323,7 @@
         general: { title: "Ting", color: "#6a1b9a", bg: "#f3e5f5", icon: "📦", apiBase: "https://www.dba.dk/recommerce/forsale/search/api/search/SEARCH_ID_BAP_COMMON", defaultParams: "?q=gratis" }
     };
 
-    // Global State (Styres nu primært af URL)
+    // Global State
     let config = {
         mode: 'car',
         customUrl: '',
@@ -344,7 +344,7 @@
     let emailQueue = [];
     let isProcessingEmail = false;
     
-    // Session ID Logic (Eneste der gemmes i LocalStorage)
+    // Session ID Logic
     let userSessionId = localStorage.getItem('dba_session_id');
     if (!userSessionId) {
         userSessionId = 'sess_' + Math.random().toString(36).substr(2, 9) + Date.now();
@@ -355,38 +355,40 @@
     window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
         
-        // Hvis ingen parametre, sæt defaults for 'car' og reload URL
         if (!urlParams.has('mode')) {
-            changeMode('car'); // Dette opdaterer URL og kører init
+            changeMode('car'); 
         } else {
-            // Ellers indlæs fra eksisterende URL
             syncConfigFromUrl();
         }
 
         checkServerLogin(); 
     };
 
-    // Browser navigation (Back/Forward knapper) skal opdatere tilstanden
     window.addEventListener('popstate', function() {
         stopMonitoring();
         syncConfigFromUrl();
     });
 
+    // --- PRIS HELPER (GRATIS LOGIK) ---
+    function getPriceLabel(item) {
+        if (item.price && item.price.amount > 0) {
+            return `${item.price.amount.toLocaleString('da-DK')} kr.`;
+        }
+        // Hvis pris mangler eller er 0, antager vi Gratis (specielt ved "Gives væk")
+        return "Gratis";
+    }
+
     // --- KONFIGURATION & URL STYRING ---
-    
-    // Læser URL -> Opdaterer config objekt -> Opdaterer UI
     function syncConfigFromUrl() {
         const params = new URLSearchParams(window.location.search);
         
-        // Læs værdier eller brug defaults
         config.mode = params.get('mode') && MODES[params.get('mode')] ? params.get('mode') : 'car';
         config.customUrl = params.get('url') || '';
         config.intervalMinutes = parseInt(params.get('interval') || '2');
         config.emailEnabled = params.get('email') === 'true';
-        config.soundEnabled = params.get('sound') !== 'false'; // Default true hvis mangler
-        config.toastEnabled = params.get('toast') !== 'false'; // Default true hvis mangler
+        config.soundEnabled = params.get('sound') !== 'false';
+        config.toastEnabled = params.get('toast') !== 'false';
 
-        // Opdater UI Inputs
         document.getElementById('inp-custom-url').value = config.customUrl;
         document.getElementById('inp-interval').value = config.intervalMinutes;
         updateSliderVal(config.intervalMinutes);
@@ -394,17 +396,14 @@
         document.getElementById('inp-sound-enabled').checked = config.soundEnabled;
         document.getElementById('inp-toast-enabled').checked = config.toastEnabled;
 
-        // Opdater Visuel Mode (Farver, Titel)
         applyModeVisuals(config.mode);
         updateConfigStatus();
     }
 
-    // Læser UI Inputs -> Opdaterer URL -> Reloader config
     function saveConfigToUrl() {
         const newParams = new URLSearchParams();
         
-        // Hent værdier fra inputs
-        const mode = config.mode; // Vi ændrer ikke mode inde fra modalen, kun via top knapper
+        const mode = config.mode;
         const url = document.getElementById('inp-custom-url').value.trim();
         const interval = document.getElementById('inp-interval').value;
         const email = document.getElementById('inp-email-enabled').checked;
@@ -418,19 +417,16 @@
         newParams.set('sound', sound);
         newParams.set('toast', toast);
 
-        // Skub ny URL til browserhistorik uden at reloade siden helt
         const newUrl = window.location.pathname + '?' + newParams.toString();
         window.history.pushState({}, '', newUrl);
 
         closeModal('settingsModal');
         
-        // Reset logik
         stopMonitoring();
         document.getElementById('item-container').innerHTML = '';
         seenIds.clear();
         isFirstLoad = true;
         
-        // Synkroniser og genstart hvis nødvendigt (brugeren skal manuelt starte igen for sikkerheds skyld, eller vi kan auto-starte)
         syncConfigFromUrl();
         alert("Indstillinger gemt i URL! Listen er nulstillet.");
     }
@@ -438,10 +434,8 @@
     function changeMode(modeKey) {
         if (!MODES[modeKey]) return;
         
-        // Ved mode-skift resetter vi til "rene" defaults for den mode
         const newParams = new URLSearchParams();
         newParams.set('mode', modeKey);
-        // Vi sætter IKKE en custom URL, så den falder tilbage til defaultParams i fetchItems
         newParams.set('interval', '2');
         newParams.set('sound', 'true');
         newParams.set('toast', 'true');
@@ -450,7 +444,6 @@
         const newUrl = window.location.pathname + '?' + newParams.toString();
         window.history.pushState({}, '', newUrl);
 
-        // Reset App State
         stopMonitoring();
         document.getElementById('item-container').innerHTML = '';
         seenIds.clear();
@@ -464,25 +457,20 @@
         document.documentElement.style.setProperty('--primary-color', theme.color);
         document.documentElement.style.setProperty('--bg-color', theme.bg);
         
-        // Opdater knapper
         document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(`btn-${modeKey}`).classList.add('active');
         
-        // Opdater Titler
-        const pageTitle = `DBA ${theme.title} Overvågning`;
+        // Initial titel (overskrives når vi henter data)
+        const pageTitle = `DBA ${theme.title}`;
         document.getElementById('page-title').innerText = pageTitle;
         originalTitle = pageTitle; 
         document.title = pageTitle;
         document.getElementById('settings-mode-title').innerText = `Søgning (${theme.title})`;
         
-        // Opdater Favicon
         document.getElementById('favicon').href = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>${theme.icon}</text></svg>`;
     }
 
-    // --- GENERELL HJÆLPEFUNKTIONER ---
-
     function copyShareLink() {
-        // Da al state er i URL'en, skal vi bare kopiere den nuværende adresse
         const url = window.location.href;
         navigator.clipboard.writeText(url).then(() => {
             const btn = document.querySelector('.share-btn');
@@ -558,15 +546,23 @@
 
     async function sendServerMail(item) {
         const searchTitle = document.getElementById('page-title').innerText;
-        let imgUrl = item.image?.url || item.images?.[0]?.url || item.image_urls?.[0] || 'https://placehold.co/600x400?text=Ingen+Billede';
         
+        let imgUrl = item.image?.url || item.images?.[0]?.url || item.image_urls?.[0] || 'https://placehold.co/600x400?text=Ingen+Billede';
+        const priceLabel = getPriceLabel(item);
+
         const emailHtml = `
             <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
                 <h2 style="color: #0047b3; margin-bottom: 10px;">Ny vare fundet!</h2>
-                <div style="margin-bottom: 20px;"><img src="${imgUrl}" style="width: 100%; border-radius: 8px;"></div>
-                <p><strong>${item.heading}</strong><br><span style="color:green;font-weight:bold;">${item.price?.amount || '?'} kr.</span></p>
-                <p>Søgning: ${searchTitle}</p>
-                <a href="${item.canonical_url}" style="background-color: #0047b3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">Se Annonce</a>
+                <div style="margin-bottom: 20px;">
+                    <img src="${imgUrl}" style="width: 100%; max-width: 600px; border-radius: 8px; border: 1px solid #eee;">
+                </div>
+                <p style="font-size: 1.1em; margin-bottom: 5px;"><strong>${item.heading}</strong></p>
+                <p style="color: green; font-weight: bold; font-size: 1.2em; margin-top: 0;">${priceLabel}</p>
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                <p style="font-size: 0.9em; color: #666;">Søgning: ${searchTitle}</p>
+                <div style="margin-top: 25px; text-align: center;">
+                    <a href="${item.canonical_url}" style="background-color: #0047b3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Se Annonce</a>
+                </div>
             </div>`;
 
         try {
@@ -574,7 +570,12 @@
             await fetch(`${cleanUrl}/send`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ session_id: userSessionId, source: "DBA Monitor", subject: `${item.heading} (${item.price?.amount || '?'} kr)`, html: emailHtml })
+                body: JSON.stringify({ 
+                    session_id: userSessionId, 
+                    source: "DBA Monitor", 
+                    subject: `${item.heading} (${priceLabel})`, 
+                    html: emailHtml 
+                })
             });
             document.getElementById('email-log').innerHTML = `<span style="color:#fff">Mail sendt</span>`;
         } catch(e) { console.error("Mail fejl", e); }
@@ -621,7 +622,6 @@
 
         try {
             let queryParams = "";
-            // Brug customUrl hvis den findes, ellers default for den valgte mode
             let inputUrl = config.customUrl && config.customUrl.length > 5 ? config.customUrl : MODES[config.mode].defaultParams;
 
             if (inputUrl.includes("?")) {
@@ -644,10 +644,21 @@
             
             const data = await response.json();
             
-            if(data.metadata && (data.metadata.title || (data.metadata.descriptions && data.metadata.descriptions.heading))) {
-                const apiTitle = data.metadata.descriptions?.heading || data.metadata.title;
-                // Opdater kun sidetitel hvis vi ikke har en custom overskrift
-                if(!config.customUrl) document.getElementById('page-title').innerText = apiTitle;
+            // DYNAMISK TITEL OPDATERING
+            if(data.metadata && data.metadata.descriptions) {
+                const dynamicTitle = data.metadata.descriptions.heading || data.metadata.descriptions.title;
+                if(dynamicTitle) {
+                    let prefix = "DBA: ";
+                    // Tjek om det er en "Gives væk" søgning (trade_type=2)
+                    if (inputUrl.includes('trade_type=2')) {
+                        prefix = "Gives væk | ";
+                    }
+                    
+                    const fullTitle = `${prefix}${dynamicTitle}`;
+                    document.getElementById('page-title').innerText = fullTitle;
+                    document.title = fullTitle;
+                    originalTitle = fullTitle; // Gem til flash logik
+                }
             }
 
             if (data && data.docs) {
@@ -707,7 +718,7 @@
         div.className = 'item-card';
 
         let imgUrl = item.image?.url || item.images?.[0]?.url || item.image_urls?.[0] || 'https://placehold.co/600x400?text=Ingen+Billede';
-        const price = item.price ? `${item.price.amount.toLocaleString('da-DK')} kr.` : '';
+        const priceLabel = getPriceLabel(item);
         const location = item.location || (item.contact_info?.city) || '';
         const timeAgo = getRelativeTime(item.timestamp);
         const year = item.year || 'N/A';
@@ -726,7 +737,7 @@
             <div class="item-details">
                 <div class="item-title">${item.heading}</div>
                 <div class="item-time" data-ts="${item.timestamp}"><i class="fa-regular fa-clock"></i> ${timeAgo}</div>
-                <div class="item-price">${price}</div>
+                <div class="item-price">${priceLabel}</div>
                 <div class="item-info">${infoHtml}</div>
                 <div class="item-location"><i class="fa-solid fa-location-dot"></i> ${location}</div>
                 <a href="${item.canonical_url}" target="_blank" class="btn-link">Se Annonce</a>
@@ -738,11 +749,11 @@
         if (!config.toastEnabled) return;
         const container = document.getElementById('toast-container');
         let imgUrl = item.image?.url || item.images?.[0]?.url || item.image_urls?.[0] || 'https://placehold.co/60x60?text=No+Img';
-        const price = item.price ? `${item.price.amount.toLocaleString('da-DK')} kr.` : 'Pris?';
+        const priceLabel = getPriceLabel(item);
 
         const toast = document.createElement('div');
         toast.className = 'toast';
-        toast.innerHTML = `<img src="${imgUrl}" class="toast-img"><div class="toast-content"><div class="toast-title">${item.heading}</div><div class="toast-price">${price}</div><div class="toast-meta">Klik for at se</div></div>`;
+        toast.innerHTML = `<img src="${imgUrl}" class="toast-img"><div class="toast-content"><div class="toast-title">${item.heading}</div><div class="toast-price">${priceLabel}</div><div class="toast-meta">Klik for at se</div></div>`;
         toast.onclick = () => window.open(item.canonical_url, '_blank');
         container.appendChild(toast);
         setTimeout(() => toast.remove(), 6000);
