@@ -549,6 +549,7 @@
         
         let imgUrl = item.image?.url || item.images?.[0]?.url || item.image_urls?.[0] || 'https://placehold.co/600x400?text=Ingen+Billede';
         const priceLabel = getPriceLabel(item);
+        const location = item.location || (item.contact_info?.city) || 'Ukendt lokation';
 
         const emailHtml = `
             <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
@@ -558,6 +559,7 @@
                 </div>
                 <p style="font-size: 1.1em; margin-bottom: 5px;"><strong>${item.heading}</strong></p>
                 <p style="color: green; font-weight: bold; font-size: 1.2em; margin-top: 0;">${priceLabel}</p>
+                <p style="color: #666; margin-top: 5px;">📍 ${location}</p>
                 <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
                 <p style="font-size: 0.9em; color: #666;">Søgning: ${searchTitle}</p>
                 <div style="margin-top: 25px; text-align: center;">
