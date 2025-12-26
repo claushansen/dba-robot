@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DBA Master Monitor</title>
+    <title>DBA Monitor</title>
     
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -199,7 +199,7 @@
     </div>
 
     <div class="header-content">
-        <h1 id="page-title">DBA Bil Overvågning</h1>
+        <h1 id="page-title">DBA Overvågning</h1>
         <div class="status-bar">Status: <span id="status-text">Klar til start</span></div>
         <div class="config-status" id="config-status">Indlæser...</div>
         <div id="email-log"></div>
@@ -248,7 +248,7 @@
             </div>
         </div>
 
-        <!-- GOOGLE LOGIN SECTION (HARDCODED URL) -->
+        <!-- GOOGLE LOGIN SECTION -->
         <div class="form-section">
             <h3 class="collapsible-header" onclick="toggleSection('email-section')">
                 <span><i class="fa-brands fa-google"></i> Gmail Integration</span>
@@ -272,8 +272,8 @@
             </div>
         </div>
         
-        <button class="save-btn" onclick="saveSettings()">Gem Indstillinger</button>
-        <button class="share-btn" onclick="copyShareLink()">🔗 Kopier Bogmærke-link</button>
+        <button class="save-btn" onclick="saveConfigToUrl()">Gem & Opdater</button>
+        <button class="share-btn" onclick="copyShareLink()">🔗 Kopier Link til denne opsætning</button>
     </div>
 </div>
 
@@ -284,12 +284,11 @@
         <h2><i class="fa-solid fa-circle-question"></i> Hjælp</h2>
         
         <div class="form-section">
-            <h3>Master App Funktioner</h3>
-            <p>Denne app samler 3 overvågningsværktøjer i én:</p>
+            <h3>Nyt: Unikke links</h3>
+            <p>Alle indstillinger gemmes nu i adresselinjen (URL'en).</p>
             <ul>
-                <li><strong>Biler:</strong> Viser Årgang og KM.</li>
-                <li><strong>Både:</strong> Viser Årgang og Fod.</li>
-                <li><strong>Ting:</strong> Generel visning for møbler, elektronik osv.</li>
+                <li>Du kan have flere faner åbne med forskellige søgninger.</li>
+                <li>Du kan bogmærke denne side, og den husker din præcise opsætning.</li>
             </ul>
         </div>
 
@@ -301,12 +300,6 @@
                 <li>Gå til <strong>Indstillinger</strong> her og sæt linket ind i "DBA Søge-URL".</li>
                 <li>Klik <strong>Gem</strong> og start overvågningen.</li>
             </ol>
-        </div>
-        
-        <div class="form-section">
-            <h3>Email</h3>
-            <p>Klik på "Forbind med Google" i indstillingerne for at aktivere email-notifikationer. Du skal være logget ind én gang.</p>
-            <p><strong>Obs:</strong> Ingen mails sendes ved første indlæsning - kun når der kommer nye ting.</p>
         </div>
     </div>
 </div>
@@ -320,16 +313,26 @@
 <script>
     // --- KONFIGURATION (HARDCODED) ---
     const CLOUDFLARE_WORKER_URL = "https://cloudflare-g-mailer.webkonsulent-claus-hansen.workers.dev";
-
-    const MODES = {
-        car: { title: "Biler", color: "#0047b3", bg: "#e3f2fd", icon: "🚗", apiBase: "https://www.dba.dk/mobility/search/api/search/SEARCH_ID_CAR_USED", defaultParams: "?location=0.200003&location=0.200004&price_to=30000", storageKey: "dba_master_car" },
-        boat: { title: "Både", color: "#0277bd", bg: "#e1f5fe", icon: "⚓", apiBase: "https://www.dba.dk/mobility/search/api/search/SEARCH_ID_BOAT_USED", defaultParams: "?class=2188&price_to=100000", storageKey: "dba_master_boat" },
-        general: { title: "Ting", color: "#6a1b9a", bg: "#f3e5f5", icon: "📦", apiBase: "https://www.dba.dk/recommerce/forsale/search/api/search/SEARCH_ID_BAP_COMMON", defaultParams: "?q=gratis", storageKey: "dba_master_general" }
-    };
     const PROXY_URL = "https://corsproxy.io/?"; 
     const NOTIFICATION_SOUND = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
-    let currentMode = 'car';
+    // Definitioner af modes (Udseende og API endpoints)
+    const MODES = {
+        car: { title: "Biler", color: "#0047b3", bg: "#e3f2fd", icon: "🚗", apiBase: "https://www.dba.dk/mobility/search/api/search/SEARCH_ID_CAR_USED", defaultParams: "?location=0.200003&location=0.200004&price_to=30000" },
+        boat: { title: "Både", color: "#0277bd", bg: "#e1f5fe", icon: "⚓", apiBase: "https://www.dba.dk/mobility/search/api/search/SEARCH_ID_BOAT_USED", defaultParams: "?class=2188&price_to=100000" },
+        general: { title: "Ting", color: "#6a1b9a", bg: "#f3e5f5", icon: "📦", apiBase: "https://www.dba.dk/recommerce/forsale/search/api/search/SEARCH_ID_BAP_COMMON", defaultParams: "?q=gratis" }
+    };
+
+    // Global State
+    let config = {
+        mode: 'car',
+        customUrl: '',
+        intervalMinutes: 2,
+        emailEnabled: false,
+        soundEnabled: true,
+        toastEnabled: true
+    };
+
     let seenIds = new Set();
     let isFirstLoad = true;
     let timerId = null;
@@ -341,25 +344,167 @@
     let emailQueue = [];
     let isProcessingEmail = false;
     
-    let config = {
-        emailEnabled: false, soundEnabled: true, toastEnabled: true, customUrl: '', intervalMinutes: 2
-    };
-    
-    // Session ID Logic (Generer unikt ID hvis det ikke findes)
+    // Session ID Logic
     let userSessionId = localStorage.getItem('dba_session_id');
     if (!userSessionId) {
         userSessionId = 'sess_' + Math.random().toString(36).substr(2, 9) + Date.now();
         localStorage.setItem('dba_session_id', userSessionId);
     }
 
+    // --- INITIALISERING ---
     window.onload = function() {
-        if(checkForUrlParams()) console.log("Config from URL");
-        const lastMode = localStorage.getItem('dba_master_last_mode');
-        if (lastMode && MODES[lastMode]) changeMode(lastMode); else changeMode('car');
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        if (!urlParams.has('mode')) {
+            changeMode('car'); 
+        } else {
+            syncConfigFromUrl();
+        }
+
         checkServerLogin(); 
     };
 
-    // --- SERVER COMMUNICATION ---
+    window.addEventListener('popstate', function() {
+        stopMonitoring();
+        syncConfigFromUrl();
+    });
+
+    // --- PRIS HELPER (GRATIS LOGIK) ---
+    function getPriceLabel(item) {
+        if (item.price && item.price.amount > 0) {
+            return `${item.price.amount.toLocaleString('da-DK')} kr.`;
+        }
+        // Hvis pris mangler eller er 0, antager vi Gratis (specielt ved "Gives væk")
+        return "Gratis";
+    }
+
+    // --- KONFIGURATION & URL STYRING ---
+    function syncConfigFromUrl() {
+        const params = new URLSearchParams(window.location.search);
+        
+        config.mode = params.get('mode') && MODES[params.get('mode')] ? params.get('mode') : 'car';
+        config.customUrl = params.get('url') || '';
+        config.intervalMinutes = parseInt(params.get('interval') || '2');
+        config.emailEnabled = params.get('email') === 'true';
+        config.soundEnabled = params.get('sound') !== 'false';
+        config.toastEnabled = params.get('toast') !== 'false';
+
+        document.getElementById('inp-custom-url').value = config.customUrl;
+        document.getElementById('inp-interval').value = config.intervalMinutes;
+        updateSliderVal(config.intervalMinutes);
+        document.getElementById('inp-email-enabled').checked = config.emailEnabled;
+        document.getElementById('inp-sound-enabled').checked = config.soundEnabled;
+        document.getElementById('inp-toast-enabled').checked = config.toastEnabled;
+
+        applyModeVisuals(config.mode);
+        updateConfigStatus();
+    }
+
+    function saveConfigToUrl() {
+        const newParams = new URLSearchParams();
+        
+        const mode = config.mode;
+        const url = document.getElementById('inp-custom-url').value.trim();
+        const interval = document.getElementById('inp-interval').value;
+        const email = document.getElementById('inp-email-enabled').checked;
+        const sound = document.getElementById('inp-sound-enabled').checked;
+        const toast = document.getElementById('inp-toast-enabled').checked;
+
+        newParams.set('mode', mode);
+        if(url) newParams.set('url', url);
+        newParams.set('interval', interval);
+        newParams.set('email', email);
+        newParams.set('sound', sound);
+        newParams.set('toast', toast);
+
+        const newUrl = window.location.pathname + '?' + newParams.toString();
+        window.history.pushState({}, '', newUrl);
+
+        closeModal('settingsModal');
+        
+        stopMonitoring();
+        document.getElementById('item-container').innerHTML = '';
+        seenIds.clear();
+        isFirstLoad = true;
+        
+        syncConfigFromUrl();
+        alert("Indstillinger gemt i URL! Listen er nulstillet.");
+    }
+
+    function changeMode(modeKey) {
+        if (!MODES[modeKey]) return;
+        
+        const newParams = new URLSearchParams();
+        newParams.set('mode', modeKey);
+        newParams.set('interval', '2');
+        newParams.set('sound', 'true');
+        newParams.set('toast', 'true');
+        newParams.set('email', 'false');
+
+        const newUrl = window.location.pathname + '?' + newParams.toString();
+        window.history.pushState({}, '', newUrl);
+
+        stopMonitoring();
+        document.getElementById('item-container').innerHTML = '';
+        seenIds.clear();
+        isFirstLoad = true;
+        
+        syncConfigFromUrl();
+    }
+
+    function applyModeVisuals(modeKey) {
+        const theme = MODES[modeKey];
+        document.documentElement.style.setProperty('--primary-color', theme.color);
+        document.documentElement.style.setProperty('--bg-color', theme.bg);
+        
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(`btn-${modeKey}`).classList.add('active');
+        
+        // Initial titel (overskrives når vi henter data)
+        const pageTitle = `DBA ${theme.title}`;
+        document.getElementById('page-title').innerText = pageTitle;
+        originalTitle = pageTitle; 
+        document.title = pageTitle;
+        document.getElementById('settings-mode-title').innerText = `Søgning (${theme.title})`;
+        
+        document.getElementById('favicon').href = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>${theme.icon}</text></svg>`;
+    }
+
+    function copyShareLink() {
+        const url = window.location.href;
+        navigator.clipboard.writeText(url).then(() => {
+            const btn = document.querySelector('.share-btn');
+            const originalText = btn.innerText;
+            btn.innerText = "✅ Link Kopieret!";
+            setTimeout(() => btn.innerText = originalText, 2000);
+        }).catch(err => alert("Fejl: " + err));
+    }
+
+    function updateSliderVal(val) { document.getElementById('interval-val').innerText = val + " min."; }
+    function openModal(id) { document.getElementById(id).style.display = 'block'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    window.onclick = function(e) { if(e.target.classList.contains('modal')) e.target.style.display='none'; }
+    function toggleSection(id) {
+        const el = document.getElementById(id);
+        const icon = document.getElementById(id + '-icon');
+        if (el.style.display === 'block') { el.style.display = 'none'; icon.classList.replace('fa-chevron-up', 'fa-chevron-down'); } 
+        else { el.style.display = 'block'; icon.classList.replace('fa-chevron-down', 'fa-chevron-up'); }
+    }
+
+    function updateConfigStatus() {
+        const el = document.getElementById('config-status');
+        let html = `<span class="config-item"><i class="fa-solid fa-stopwatch"></i> ${config.intervalMinutes} min</span>`;
+        if(config.customUrl) html += ` | <span class="config-item config-ok"><i class="fa-solid fa-link"></i> URL</span>`;
+        else html += ` | <span class="config-item config-missing"><i class="fa-solid fa-link-slash"></i> Standard</span>`;
+        
+        if(config.soundEnabled) html += ` | <span class="config-item config-ok"><i class="fa-solid fa-volume-high"></i></span>`;
+        else html += ` | <span class="config-item" style="color:#aaa;"><i class="fa-solid fa-volume-xmark"></i></span>`;
+        
+        if(config.emailEnabled) html += ` | <span class="config-item config-ok"><i class="fa-solid fa-envelope"></i></span>`;
+        el.innerHTML = html;
+    }
+
+    // --- SERVER LOGIC (GMAIL) ---
     function connectGoogle() {
         const authUrl = `${CLOUDFLARE_WORKER_URL}/auth?session_id=${userSessionId}`;
         window.open(authUrl, '_blank', 'width=500,height=600');
@@ -381,13 +526,10 @@
                 document.getElementById('login-container').style.display = 'block';
                 document.getElementById('logged-in-section').style.display = 'none';
             }
-        } catch(e) {
-            console.log("Server ikke tilgængelig");
-        }
+        } catch(e) { console.log("Server status check failed"); }
         return false;
     }
 
-    // --- EMAIL QUEUE SYSTEM ---
     function queueEmail(item) {
         if(!config.emailEnabled) return;
         emailQueue.push(item);
@@ -396,261 +538,60 @@
 
     async function processEmailQueue() {
         if (isProcessingEmail || emailQueue.length === 0) return;
-        
         isProcessingEmail = true;
-        const item = emailQueue.shift(); // Tag den første i køen
-        
+        const item = emailQueue.shift();
         await sendServerMail(item);
-        
-        // Vent 2 sekunder før næste mail for at undgå rate limit (429)
-        setTimeout(() => {
-            isProcessingEmail = false;
-            processEmailQueue();
-        }, 2000); 
+        setTimeout(() => { isProcessingEmail = false; processEmailQueue(); }, 2000); 
     }
 
     async function sendServerMail(item) {
-        if(!config.service) return; // (Eller tjek config.emailEnabled hvis du bruger den logik)
-        
         const searchTitle = document.getElementById('page-title').innerText;
         
-        // 1. Find det bedste billede (Samme logik som i kortet)
-        let imgUrl = 'https://placehold.co/600x400?text=Ingen+Billede';
-        if (item.image?.url) imgUrl = item.image.url;
-        else if (item.images?.[0]?.url) imgUrl = item.images[0].url;
-        else if (item.image_urls?.[0]) imgUrl = item.image_urls[0];
+        let imgUrl = item.image?.url || item.images?.[0]?.url || item.image_urls?.[0] || 'https://placehold.co/600x400?text=Ingen+Billede';
+        const priceLabel = getPriceLabel(item);
+        const location = item.location || (item.contact_info?.city) || 'Ukendt lokation';
 
-        // 2. Byg HTML med billede
         const emailHtml = `
             <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
                 <h2 style="color: #0047b3; margin-bottom: 10px;">Ny vare fundet!</h2>
-                
-                <!-- BILLEDE HER -->
                 <div style="margin-bottom: 20px;">
-                    <img src="${imgUrl}" alt="${item.heading}" style="width: 100%; max-width: 600px; height: auto; border-radius: 8px; border: 1px solid #ddd;">
+                    <img src="${imgUrl}" style="width: 100%; max-width: 600px; border-radius: 8px; border: 1px solid #eee;">
                 </div>
-
-                <table style="width: 100%; border-collapse: collapse;">
-                    <tr>
-                        <td style="padding: 8px; border-bottom: 1px solid #ddd; width: 30%;"><strong>Overskrift:</strong></td>
-                        <td style="padding: 8px; border-bottom: 1px solid #ddd;">${item.heading}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Pris:</strong></td>
-                        <td style="padding: 8px; border-bottom: 1px solid #ddd; color: green; font-weight: bold;">${item.price?.amount || '?'} kr.</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Søgning:</strong></td>
-                        <td style="padding: 8px; border-bottom: 1px solid #ddd;">${searchTitle}</td>
-                    </tr>
-                </table>
-
-                <div style="margin-top: 30px; text-align: center;">
-                    <a href="${item.canonical_url}" style="background-color: #0047b3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 16px; display: inline-block;">
-                        Se Annoncen på DBA
-                    </a>
+                <p style="font-size: 1.1em; margin-bottom: 5px;"><strong>${item.heading}</strong></p>
+                <p style="color: green; font-weight: bold; font-size: 1.2em; margin-top: 0;">${priceLabel}</p>
+                <p style="color: #666; margin-top: 5px;">📍 ${location}</p>
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                <p style="font-size: 0.9em; color: #666;">Søgning: ${searchTitle}</p>
+                <div style="margin-top: 25px; text-align: center;">
+                    <a href="${item.canonical_url}" style="background-color: #0047b3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Se Annonce</a>
                 </div>
-                
-                <p style="font-size: 12px; color: #999; margin-top: 30px; text-align: center;">
-                    Sendt fra DBA Master Monitor
-                </p>
-            </div>
-        `;
+            </div>`;
 
         try {
-            // Husk at bruge config.customUrl eller den hardcodede konstant, afhængig af din opsætning.
-            // Her antager jeg, at du bruger den globale konstant fra sidst:
             const cleanUrl = CLOUDFLARE_WORKER_URL.replace(/\/$/, "");
-
             await fetch(`${cleanUrl}/send`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
+                body: JSON.stringify({ 
                     session_id: userSessionId, 
-                    source: "DBA Monitor",
-                    subject: `${item.heading} (${item.price?.amount || '?'} kr)`,
-                    html: emailHtml
+                    source: "DBA Monitor", 
+                    subject: `${item.heading} (${priceLabel})`, 
+                    html: emailHtml 
                 })
             });
             document.getElementById('email-log').innerHTML = `<span style="color:#fff">Mail sendt</span>`;
-        } catch(e) {
-            console.error("Mail fejl", e);
-        }
-    }
-    // --- SHARED LOGIC ---
-    function toggleSection(id) {
-        const el = document.getElementById(id);
-        const icon = document.getElementById(id + '-icon');
-        if (el.style.display === 'block') {
-            el.style.display = 'none';
-            icon.classList.remove('fa-chevron-up');
-            icon.classList.add('fa-chevron-down');
-        } else {
-            el.style.display = 'block';
-            icon.classList.remove('fa-chevron-down');
-            icon.classList.add('fa-chevron-up');
-        }
+        } catch(e) { console.error("Mail fejl", e); }
     }
 
-    function checkForUrlParams() { 
-        const params = new URLSearchParams(window.location.search);
-        if (!params.has('mode')) return false;
-        const mode = params.get('mode');
-        if(!MODES[mode]) return false;
-        localStorage.setItem('dba_master_last_mode', mode);
-        const prefix = MODES[mode].storageKey;
-        if(params.has('url')) localStorage.setItem(`${prefix}_url`, params.get('url'));
-        if(params.has('interval')) localStorage.setItem(`${prefix}_interval`, params.get('interval'));
-        if(params.has('email')) localStorage.setItem(`${prefix}_email_enabled`, params.get('email'));
-        if(params.has('sound')) localStorage.setItem(`${prefix}_sound_enabled`, params.get('sound'));
-        if(params.has('toast')) localStorage.setItem(`${prefix}_toast_enabled`, params.get('toast'));
-        window.history.replaceState({}, document.title, window.location.pathname);
-        return true;
-    }
-    
-    function copyShareLink() {
-        const params = new URLSearchParams();
-        params.set('mode', currentMode);
-        if(config.customUrl) params.set('url', config.customUrl);
-        params.set('interval', config.intervalMinutes);
-        params.set('email', config.emailEnabled);
-        params.set('sound', config.soundEnabled);
-        params.set('toast', config.toastEnabled);
-        const shareUrl = window.location.origin + window.location.pathname + '?' + params.toString();
-        navigator.clipboard.writeText(shareUrl).then(() => alert("Link kopieret!")).catch(err => alert("Fejl: " + err));
-    }
-
-    function startTitleFlash(text) {
-        if (titleInterval) return;
-        let flash = false; originalTitle = document.title;
-        titleInterval = setInterval(() => { document.title = flash ? originalTitle : text; flash = !flash; }, 1000);
-        window.addEventListener('focus', stopTitleFlash, { once: true });
-        window.addEventListener('click', stopTitleFlash, { once: true });
-    }
-    function stopTitleFlash() { clearInterval(titleInterval); titleInterval = null; document.title = originalTitle; }
-
-    function changeMode(mode) {
-        if (!MODES[mode]) return;
-        currentMode = mode; localStorage.setItem('dba_master_last_mode', mode);
-        const theme = MODES[mode];
-        document.documentElement.style.setProperty('--primary-color', theme.color);
-        document.documentElement.style.setProperty('--bg-color', theme.bg);
-        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(`btn-${mode}`).classList.add('active');
-        const pageTitle = `DBA ${theme.title} Overvågning`;
-        document.getElementById('page-title').innerText = pageTitle;
-        originalTitle = pageTitle; document.title = pageTitle;
-        document.getElementById('settings-mode-title').innerText = `Søgning (${theme.title})`;
-        document.getElementById('favicon').href = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>${theme.icon}</text></svg>`;
-        stopMonitoring(); document.getElementById('item-container').innerHTML = ''; seenIds.clear(); isFirstLoad = true;
-        loadSettings();
-    }
-
-    function loadSettings() {
-        const prefix = MODES[currentMode].storageKey;
-        config.emailEnabled = (localStorage.getItem(`${prefix}_email_enabled`) === 'true');
-        config.soundEnabled = (localStorage.getItem(`${prefix}_sound_enabled`) !== 'false');
-        config.toastEnabled = (localStorage.getItem(`${prefix}_toast_enabled`) !== 'false');
-        config.customUrl = localStorage.getItem(`${prefix}_url`) || '';
-        const savedInterval = localStorage.getItem(`${prefix}_interval`);
-        config.intervalMinutes = savedInterval ? parseInt(savedInterval) : 2;
-        
-        document.getElementById('inp-email-enabled').checked = config.emailEnabled;
-        document.getElementById('inp-sound-enabled').checked = config.soundEnabled;
-        document.getElementById('inp-toast-enabled').checked = config.toastEnabled;
-        document.getElementById('inp-custom-url').value = config.customUrl;
-        document.getElementById('inp-interval').value = config.intervalMinutes;
-        updateSliderVal(config.intervalMinutes);
-        updateConfigStatus();
-    }
-
-    function saveSettings() {
-        const emailEnabled = document.getElementById('inp-email-enabled').checked;
-        const soundEnabled = document.getElementById('inp-sound-enabled').checked;
-        const toastEnabled = document.getElementById('inp-toast-enabled').checked;
-        const customUrl = document.getElementById('inp-custom-url').value.trim();
-        const interval = parseInt(document.getElementById('inp-interval').value);
-
-        const prefix = MODES[currentMode].storageKey;
-        localStorage.setItem(`${prefix}_email_enabled`, emailEnabled);
-        localStorage.setItem(`${prefix}_sound_enabled`, soundEnabled);
-        localStorage.setItem(`${prefix}_toast_enabled`, toastEnabled);
-        localStorage.setItem(`${prefix}_url`, customUrl);
-        localStorage.setItem(`${prefix}_interval`, interval);
-
-        config = { emailEnabled, soundEnabled, toastEnabled, customUrl, intervalMinutes: interval };
-
-        // LOGIC FOR RESETTING WHEN SAVING
-        seenIds.clear();
-        document.getElementById('item-container').innerHTML = '';
-        isFirstLoad = true;
-        emailQueue = [];
-
-        updateConfigStatus();
-        closeModal('settingsModal');
-        alert("Indstillinger gemt! Listen nulstilles.");
-        
-        if (isRunning) {
-            clearInterval(timerId);
-            fetchItems();
-            timerId = setInterval(fetchItems, config.intervalMinutes * 60000);
-        }
-    }
-
-    function updateSliderVal(val) { document.getElementById('interval-val').innerText = val + " min."; }
-    function openModal(id) { document.getElementById(id).style.display = 'block'; }
-    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-    window.onclick = function(e) { if(e.target.classList.contains('modal')) e.target.style.display='none'; }
-
-    function updateConfigStatus() {
-        const el = document.getElementById('config-status');
-        let html = `<span class="config-item"><i class="fa-solid fa-stopwatch"></i> ${config.intervalMinutes} min</span>`;
-        if(config.customUrl) html += ` | <span class="config-item config-ok"><i class="fa-solid fa-link"></i> URL</span>`;
-        else html += ` | <span class="config-item config-missing"><i class="fa-solid fa-link-slash"></i> Ingen URL</span>`;
-        if(config.soundEnabled) html += ` | <span class="config-item config-ok"><i class="fa-solid fa-volume-high"></i> Lyd</span>`;
-        else html += ` | <span class="config-item" style="color:#aaa;"><i class="fa-solid fa-volume-xmark"></i> Lyd</span>`;
-        
-        if(config.emailEnabled) html += ` | <span class="config-item config-ok"><i class="fa-solid fa-envelope"></i> Email</span>`;
-        el.innerHTML = html;
-    }
-
-    function showToast(item) {
-        if (!config.toastEnabled) return;
-        const container = document.getElementById('toast-container');
-        let imgUrl = 'https://placehold.co/60x60?text=No+Img';
-        if (item.image?.url) imgUrl = item.image.url;
-        else if (item.images?.[0]?.url) imgUrl = item.images[0].url;
-        else if (item.image_urls?.[0]) imgUrl = item.image_urls[0];
-
-        const price = item.price ? `${item.price.amount.toLocaleString('da-DK')} kr.` : 'Pris?';
-
-        const toast = document.createElement('div');
-        toast.className = 'toast';
-        toast.innerHTML = `
-            <img src="${imgUrl}" class="toast-img">
-            <div class="toast-content">
-                <div class="toast-title">${item.heading}</div>
-                <div class="toast-price">${price}</div>
-                <div class="toast-meta">Klik for at se</div>
-            </div>
-        `;
-        toast.onclick = () => window.open(item.canonical_url, '_blank');
-        container.appendChild(toast);
-        setTimeout(() => toast.remove(), 6000);
-    }
-
-    // --- MONITORING ---
+    // --- MONITORING LOGIC ---
     function toggleMonitoring() {
-        if (isRunning) {
-            stopMonitoring();
-        } else {
-            startMonitoring();
-        }
+        if (isRunning) stopMonitoring();
+        else startMonitoring();
     }
 
     async function startMonitoring() {
         if ("Notification" in window) Notification.requestPermission();
-
+        
         const btn = document.getElementById('toggle-btn');
         btn.innerHTML = '<i class="fa-solid fa-stop"></i> STOP Overvågning';
         btn.classList.add('running');
@@ -658,14 +599,10 @@
         
         if (config.soundEnabled) {
             NOTIFICATION_SOUND.volume = 0.5;
-            NOTIFICATION_SOUND.play().then(() => {
-                NOTIFICATION_SOUND.pause();
-                NOTIFICATION_SOUND.currentTime = 0;
-            }).catch(e => {});
+            NOTIFICATION_SOUND.play().then(() => { NOTIFICATION_SOUND.pause(); NOTIFICATION_SOUND.currentTime = 0; }).catch(e => {});
         }
 
         await fetchItems();
-
         if (timerId) clearInterval(timerId);
         timerId = setInterval(fetchItems, config.intervalMinutes * 60000);
     }
@@ -677,6 +614,7 @@
         btn.innerHTML = '<i class="fa-solid fa-play"></i> Aktiver Lyd, Notifikationer & Start';
         btn.classList.remove('running');
         document.getElementById('status-text').innerText = "Stoppet / Klar";
+        stopTitleFlash();
     }
 
     async function fetchItems() {
@@ -686,7 +624,7 @@
 
         try {
             let queryParams = "";
-            let inputUrl = config.customUrl || MODES[currentMode].defaultParams;
+            let inputUrl = config.customUrl && config.customUrl.length > 5 ? config.customUrl : MODES[config.mode].defaultParams;
 
             if (inputUrl.includes("?")) {
                 const parts = inputUrl.split('?');
@@ -695,22 +633,34 @@
                 queryParams = "?" + inputUrl;
             }
 
-            const apiBase = MODES[currentMode].apiBase;
+            const apiBase = MODES[config.mode].apiBase;
             const timestamp = new Date().getTime();
             const separator = queryParams.includes('?') ? '&' : '?';
             const finalDbaUrl = `${apiBase}${queryParams}${separator}_t=${timestamp}`;
             const finalFetchUrl = PROXY_URL + encodeURIComponent(finalDbaUrl);
 
-            console.log("Fetcher ("+currentMode+"): ", finalDbaUrl);
+            console.log("Fetching: ", finalDbaUrl);
 
             const response = await fetch(finalFetchUrl);
             if (!response.ok) throw new Error(`Netværksfejl: ${response.status}`);
             
             const data = await response.json();
             
-            if(data.metadata && (data.metadata.title || (data.metadata.descriptions && data.metadata.descriptions.heading))) {
-                const apiTitle = data.metadata.descriptions?.heading || data.metadata.title;
-                document.getElementById('page-title').innerText = apiTitle;
+            // DYNAMISK TITEL OPDATERING
+            if(data.metadata && data.metadata.descriptions) {
+                const dynamicTitle = data.metadata.descriptions.heading || data.metadata.descriptions.title;
+                if(dynamicTitle) {
+                    let prefix = "DBA: ";
+                    // Tjek om det er en "Gives væk" søgning (trade_type=2)
+                    if (inputUrl.includes('trade_type=2')) {
+                        prefix = "Gives væk | ";
+                    }
+                    
+                    const fullTitle = `${prefix}${dynamicTitle}`;
+                    document.getElementById('page-title').innerText = fullTitle;
+                    document.title = fullTitle;
+                    originalTitle = fullTitle; // Gem til flash logik
+                }
             }
 
             if (data && data.docs) {
@@ -744,29 +694,18 @@
                     newFound = true;
                     card.classList.add('new-entry');
                     card.insertAdjacentHTML('afterbegin', '<div class="badge-new">NY!</div>');
-                    
-                    // Queue email instead of sending immediately to avoid 429
                     queueEmail(item);
-                    
                     showToast(item);
 
                     if (Notification.permission === "granted") {
-                        const notif = new Notification("Ny DBA Annonce!", {
-                            body: item.heading,
-                            icon: item.image?.url || item.images?.[0]?.url,
-                            silent: true
-                        });
-                        notif.onclick = () => window.open(item.canonical_url, '_blank');
+                        new Notification("Ny DBA Annonce!", { body: item.heading, icon: item.image?.url || item.images?.[0]?.url, silent: true }).onclick = () => window.open(item.canonical_url, '_blank');
                     }
                 }
                 container.prepend(card);
             }
         });
 
-        // BEGRÆNS TIL 50 KORT
-        while (container.children.length > 50) {
-            container.removeChild(container.lastElementChild);
-        }
+        while (container.children.length > 50) container.removeChild(container.lastElementChild);
 
         updateTimeAgo();
         if (newFound) {
@@ -780,26 +719,19 @@
         const div = document.createElement('div');
         div.className = 'item-card';
 
-        let imgUrl = 'https://placehold.co/600x400?text=Ingen+Billede';
-        if (item.image?.url) imgUrl = item.image.url;
-        else if (item.images?.[0]?.url) imgUrl = item.images[0].url;
-        else if (item.image_urls?.[0]) imgUrl = item.image_urls[0];
-
-        const price = item.price ? `${item.price.amount.toLocaleString('da-DK')} kr.` : '';
+        let imgUrl = item.image?.url || item.images?.[0]?.url || item.image_urls?.[0] || 'https://placehold.co/600x400?text=Ingen+Billede';
+        const priceLabel = getPriceLabel(item);
         const location = item.location || (item.contact_info?.city) || '';
         const timeAgo = getRelativeTime(item.timestamp);
-
-        let infoHtml = '';
         const year = item.year || 'N/A';
 
-        if (currentMode === 'car') {
+        let infoHtml = '';
+        if (config.mode === 'car') {
             const km = item.mileage ? item.mileage.toLocaleString() : '0';
-            infoHtml = `<span><i class="fa-regular fa-calendar"></i> ${year}</span>
-                        <span><i class="fa-solid fa-road"></i> ${km} km</span>`;
-        } else if (currentMode === 'boat') {
+            infoHtml = `<span><i class="fa-regular fa-calendar"></i> ${year}</span><span><i class="fa-solid fa-road"></i> ${km} km</span>`;
+        } else if (config.mode === 'boat') {
             const fod = item.length ? item.length : '?';
-            infoHtml = `<span><i class="fa-regular fa-calendar"></i> ${year}</span>
-                        <span><i class="fa-solid fa-ruler-horizontal"></i> ${fod} fod</span>`;
+            infoHtml = `<span><i class="fa-regular fa-calendar"></i> ${year}</span><span><i class="fa-solid fa-ruler-horizontal"></i> ${fod} fod</span>`;
         }
 
         div.innerHTML = `
@@ -807,22 +739,37 @@
             <div class="item-details">
                 <div class="item-title">${item.heading}</div>
                 <div class="item-time" data-ts="${item.timestamp}"><i class="fa-regular fa-clock"></i> ${timeAgo}</div>
-                <div class="item-price">${price}</div>
+                <div class="item-price">${priceLabel}</div>
                 <div class="item-info">${infoHtml}</div>
                 <div class="item-location"><i class="fa-solid fa-location-dot"></i> ${location}</div>
                 <a href="${item.canonical_url}" target="_blank" class="btn-link">Se Annonce</a>
-            </div>
-        `;
+            </div>`;
         return div;
     }
 
-    function updateTimeAgo() {
-        document.querySelectorAll('.item-time').forEach(el => {
-            const ts = parseInt(el.getAttribute('data-ts'));
-            if(ts) el.innerHTML = `<i class="fa-regular fa-clock"></i> ${getRelativeTime(ts)}`;
-        });
+    function showToast(item) {
+        if (!config.toastEnabled) return;
+        const container = document.getElementById('toast-container');
+        let imgUrl = item.image?.url || item.images?.[0]?.url || item.image_urls?.[0] || 'https://placehold.co/60x60?text=No+Img';
+        const priceLabel = getPriceLabel(item);
+
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.innerHTML = `<img src="${imgUrl}" class="toast-img"><div class="toast-content"><div class="toast-title">${item.heading}</div><div class="toast-price">${priceLabel}</div><div class="toast-meta">Klik for at se</div></div>`;
+        toast.onclick = () => window.open(item.canonical_url, '_blank');
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 6000);
     }
 
+    function startTitleFlash(text) {
+        if (titleInterval) return;
+        let flash = false; 
+        titleInterval = setInterval(() => { document.title = flash ? originalTitle : text; flash = !flash; }, 1000);
+        window.addEventListener('focus', stopTitleFlash, { once: true });
+        window.addEventListener('click', stopTitleFlash, { once: true });
+    }
+    function stopTitleFlash() { clearInterval(titleInterval); titleInterval = null; document.title = originalTitle; }
+    
     function getRelativeTime(ts) {
         if(!ts) return "";
         const sec = Math.floor((new Date().getTime() - ts)/1000);
@@ -837,6 +784,13 @@
     function playSound() {
         NOTIFICATION_SOUND.currentTime = 0;
         NOTIFICATION_SOUND.play().catch(e => {});
+    }
+
+    function updateTimeAgo() {
+        document.querySelectorAll('.item-time').forEach(el => {
+            const ts = parseInt(el.getAttribute('data-ts'));
+            if(ts) el.innerHTML = `<i class="fa-regular fa-clock"></i> ${getRelativeTime(ts)}`;
+        });
     }
 </script>
 
