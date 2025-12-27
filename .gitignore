@@ -1,0 +1,45 @@
+# Folders
+.github/
+.git/
+
+# OS Files
+.DS_Store
+Thumbs.db
+*.exe
+*.dll
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*~
+.sublime-project
+.sublime-workspace
+*.code-workspace
+
+# Node modules (if added in future)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Temporary & Log Files
+*.log
+*.tmp
+*.temp
+.cache/
+dist/
+build/
+
+# Environment files (if added)
+.env
+.env.local
+.env.*.local
+
+# OS metadata
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
