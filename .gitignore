@@ -19,6 +19,10 @@ Thumbs.db
 .sublime-workspace
 *.code-workspace
 
+# Claude Code
+.claude/
+CLAUDE.md
+
 # Node modules (if added in future)
 node_modules/
 npm-debug.log
